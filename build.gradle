@@ -1,7 +1,8 @@
 plugins {
-    id 'java'
+    id 'java-library'
     id 'org.springframework.boot' version '4.0.6'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'maven-publish'
 }
 
 group = 'com.vn.security.core'
@@ -12,7 +13,13 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
     }
+    withSourcesJar()
+    withJavadocJar()
 }
+
+// Starter là library, không phải executable app
+bootJar { enabled = false }
+jar     { enabled = true; archiveClassifier = '' }
 
 repositories {
     mavenCentral()
@@ -20,10 +27,10 @@ repositories {
 
 dependencies {
     // Web + Security
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    api 'org.springframework.boot:spring-boot-starter-web'
+    api 'org.springframework.boot:spring-boot-starter-security'
+    api 'org.springframework.boot:spring-boot-starter-data-jpa'
+    api 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -31,9 +38,9 @@ dependencies {
     implementation 'org.aspectj:aspectjweaver'
 
     // JWT
-    implementation 'org.springframework.security:spring-security-oauth2-resource-server'
-    implementation 'org.springframework.security:spring-security-oauth2-jose'
-    implementation 'org.springframework.security:spring-security-data'
+    api 'org.springframework.security:spring-security-oauth2-resource-server'
+    api 'org.springframework.security:spring-security-oauth2-jose'
+    api 'org.springframework.security:spring-security-data'
 
     // Database
     runtimeOnly 'org.postgresql:postgresql'
@@ -44,7 +51,7 @@ dependencies {
     implementation 'com.hazelcast:hazelcast-hibernate53:5.2.0'
 
     // MapStruct
-    implementation 'org.mapstruct:mapstruct:1.6.3'
+    api 'org.mapstruct:mapstruct:1.6.3'
     annotationProcessor 'org.mapstruct:mapstruct-processor:1.6.3'
 
     // Jackson
@@ -61,6 +68,9 @@ dependencies {
     implementation 'org.apache.commons:commons-lang3'
     implementation 'org.hibernate.validator:hibernate-validator'
 
+    // Auto-configuration metadata
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
@@ -69,4 +79,12 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
 }
