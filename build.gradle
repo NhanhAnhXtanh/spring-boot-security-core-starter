@@ -81,6 +81,11 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
+tasks.named('javadoc', Javadoc) {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    failOnError = false
+}
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
