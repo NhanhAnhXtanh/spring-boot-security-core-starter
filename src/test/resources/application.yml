@@ -33,7 +33,7 @@ spring:
   thymeleaf:
     mode: HTML
 
-application:
+security-core:
   security:
     jwt:
       base64-secret: bXktdmVyeS1sb25nLXNlY3VyaXR5LWNvcmUtc2VjcmV0LWtleS10aGF0LWlzLWRlZmluaXRlbHktbG9uZy1lbm91Z2gtZm9yLUhTNTEyLWFsZ29yaXRobS15ZXMteWVzLXllcw==

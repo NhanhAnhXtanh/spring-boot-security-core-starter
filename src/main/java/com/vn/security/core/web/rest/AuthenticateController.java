@@ -40,10 +40,10 @@ public class AuthenticateController {
 
     private final JwtEncoder jwtEncoder;
 
-    @Value("${application.security.jwt.token-validity-in-seconds:0}")
+    @Value("${security-core.security.jwt.token-validity-in-seconds:0}")
     private long tokenValidityInSeconds;
 
-    @Value("${application.security.jwt.token-validity-in-seconds-for-remember-me:0}")
+    @Value("${security-core.security.jwt.token-validity-in-seconds-for-remember-me:0}")
     private long tokenValidityInSecondsForRememberMe;
 
     private final AuthenticationManagerBuilder authenticationManagerBuilder;

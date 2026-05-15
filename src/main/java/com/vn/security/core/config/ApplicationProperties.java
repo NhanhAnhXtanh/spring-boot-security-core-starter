@@ -2,7 +2,7 @@ package com.vn.security.core.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "application", ignoreUnknownFields = false)
+@ConfigurationProperties(prefix = "security-core")
 public class ApplicationProperties {
 
     private final Liquibase liquibase = new Liquibase();

@@ -33,7 +33,7 @@ public class SecurityJwtConfiguration {
 
     private static final Logger LOG = LoggerFactory.getLogger(SecurityJwtConfiguration.class);
 
-    @Value("${application.security.jwt.base64-secret}")
+    @Value("${security-core.security.jwt.base64-secret}")
     private String jwtKey;
 
     @Bean

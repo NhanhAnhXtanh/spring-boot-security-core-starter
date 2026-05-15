@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 /**
  * YAML-backed implementation of {@link FetchPlanRepository}.
  * Loads fetch plan definitions from the file specified in
- * {@code application.fetch-plans.config} (default: {@code classpath:fetch-plans.yml}).
+ * {@code security-core.fetch-plans.config} (default: {@code classpath:fetch-plans.yml}).
  *
  * <p>Plans are keyed as {@code entityClassName.toLowerCase()#planName} for lookup.
  * Supports {@code extends} to inherit properties from another named plan.
