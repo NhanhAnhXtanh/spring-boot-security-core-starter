@@ -1,0 +1,83 @@
+fetch-plans:
+  - entity: com.vn.security.core.domain.Organization
+    name: organization-list
+    properties:
+      - id
+      - code
+      - name
+      - ownerLogin
+
+  - entity: com.vn.security.core.domain.Organization
+    name: organization-detail
+    extends: organization-list
+    properties:
+      - budget
+      - name: departments
+        properties:
+          - id
+          - code
+          - name
+          - costCenter
+          - name: employees
+            properties:
+              - id
+              - employeeNumber
+              - firstName
+              - lastName
+              - email
+              - salary
+
+  - entity: com.vn.security.core.domain.Department
+    name: department-list
+    properties:
+      - id
+      - code
+      - name
+      - name: organization
+        properties:
+          - id
+          - name
+      - costCenter
+
+  - entity: com.vn.security.core.domain.Department
+    name: department-detail
+    extends: department-list
+    properties:
+      - name: organization
+        properties:
+          - id
+          - code
+          - name
+          - ownerLogin
+      - name: employees
+        properties:
+          - id
+          - employeeNumber
+          - firstName
+          - lastName
+          - email
+          - salary
+
+  - entity: com.vn.security.core.domain.Employee
+    name: employee-list
+    properties:
+      - id
+      - employeeNumber
+      - firstName
+      - lastName
+      - name: department
+        properties:
+          - id
+          - name
+      - email
+
+  - entity: com.vn.security.core.domain.Employee
+    name: employee-detail
+    extends: employee-list
+    properties:
+      - salary
+      - name: department
+        properties:
+          - id
+          - code
+          - name

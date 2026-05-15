@@ -1,0 +1,102 @@
+package com.vn.security.core.security.permission;
+
+import com.vn.security.core.security.MergedSecurityService;
+import com.vn.security.core.security.domain.SecPermission;
+import com.vn.security.core.security.store.SecPermissionStore;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+/**
+ * Default implementation of {@link AttributePermissionEvaluator}.
+ *
+ * <p>Attribute-level permissions default to restrictive: if no permission records exist
+ * for the given attribute or its entity wildcard target, access is denied. Matching
+ * ALLOW records union across authorities; DENY records do not override another
+ * authority's ALLOW.
+ *
+ * <p>Edit-implies-view: VIEW access is implicitly granted whenever EDIT is effectively granted
+ * (directly or via {@code ENTITY.*} wildcard). This mirrors Jmix semantics where modify
+ * permission subsumes read permission.
+ */
+@Component
+public class AttributePermissionEvaluatorImpl implements AttributePermissionEvaluator {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AttributePermissionEvaluatorImpl.class);
+
+    private final SecPermissionStore secPermissionStore;
+    private final MergedSecurityService mergedSecurityService;
+    private final RequestPermissionSnapshot requestPermissionSnapshot;
+
+    public AttributePermissionEvaluatorImpl(
+        SecPermissionStore secPermissionStore,
+        MergedSecurityService mergedSecurityService,
+        RequestPermissionSnapshot requestPermissionSnapshot
+    ) {
+        this.secPermissionStore = secPermissionStore;
+        this.mergedSecurityService = mergedSecurityService;
+        this.requestPermissionSnapshot = requestPermissionSnapshot;
+    }
+
+    @Override
+    public boolean canView(Class<?> entityClass, String attribute) {
+        return checkAttributePermission(entityClass, attribute, "VIEW");
+    }
+
+    @Override
+    public boolean canEdit(Class<?> entityClass, String attribute) {
+        return checkAttributePermission(entityClass, attribute, "EDIT");
+    }
+
+    private boolean checkAttributePermission(Class<?> entityClass, String attribute, String action) {
+        String entityTarget = entityClass.getSimpleName().toUpperCase(Locale.ROOT);
+        String specificTarget = entityTarget + "." + attribute.toUpperCase(Locale.ROOT);
+
+        // Use request-scoped snapshot when available: matrix lookup replaces per-attribute DB query.
+        if (RequestPermissionSnapshot.isRequestScopeActive()) {
+            boolean permitted = requestPermissionSnapshot.getMatrix().isAttributePermitted(specificTarget, action);
+            if (!permitted) {
+                LOG.debug("Snapshot: no ALLOW for attribute {} {} on {} - access denied", action, attribute, entityClass.getSimpleName());
+            }
+            return permitted;
+        }
+
+        // Fallback for non-web contexts.
+        Collection<String> authorities = mergedSecurityService.getCurrentUserAuthorityNames();
+        if (authorities.isEmpty()) {
+            LOG.debug("No authorities for current user - denying attribute {} {} on {}", action, attribute, entityClass.getSimpleName());
+            return false;
+        }
+
+        String wildcardTarget = entityTarget + ".*";
+        List<String> targets = List.of(specificTarget, wildcardTarget);
+        List<SecPermission> perms = secPermissionStore.findByRolesAndTargets(authorities, TargetType.ATTRIBUTE, targets, action);
+        if (perms.stream().anyMatch(p -> "ALLOW".equals(p.getEffect()))) {
+            return true;
+        }
+
+        // Edit-implies-view: if EDIT is granted (directly or via wildcard), VIEW is implicitly granted.
+        if ("VIEW".equals(action)) {
+            List<SecPermission> editPerms = secPermissionStore.findByRolesAndTargets(
+                authorities,
+                TargetType.ATTRIBUTE,
+                targets,
+                "EDIT"
+            );
+            if (editPerms.stream().anyMatch(p -> "ALLOW".equals(p.getEffect()))) {
+                LOG.debug(
+                    "Edit-implies-view: EDIT ALLOW found for attribute {} on {} - VIEW granted",
+                    attribute,
+                    entityClass.getSimpleName()
+                );
+                return true;
+            }
+        }
+
+        LOG.debug("No ALLOW attribute permission found for targets={} action={} - access denied", targets, action);
+        return false;
+    }
+}

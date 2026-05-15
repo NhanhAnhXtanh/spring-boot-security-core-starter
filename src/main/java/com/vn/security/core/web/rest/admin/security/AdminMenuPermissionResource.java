@@ -1,0 +1,125 @@
+package com.vn.security.core.web.rest.admin.security;
+
+import com.vn.security.core.repository.AuthorityRepository;
+import com.vn.security.core.security.AuthoritiesConstants;
+import com.vn.security.core.security.domain.MenuAppName;
+import com.vn.security.core.security.domain.SecMenuPermission;
+import com.vn.security.core.security.store.SecMenuPermissionStore;
+import com.vn.security.core.service.dto.security.SecMenuPermissionDTO;
+import com.vn.security.core.web.rest.errors.BadRequestAlertException;
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import com.vn.security.core.util.HeaderUtil;
+
+/**
+ * REST controller for managing menu permissions.
+ * Exposes create, query, and delete at /api/admin/sec/menu-permissions for admin users only.
+ */
+@RestController
+@RequestMapping("/api/admin/sec/menu-permissions")
+@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+public class AdminMenuPermissionResource {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AdminMenuPermissionResource.class);
+
+    private static final String ENTITY_NAME = "secMenuPermission";
+
+    @Value("${spring.application.name:security-core}")
+    private String applicationName;
+
+    private final SecMenuPermissionStore secMenuPermissionStore;
+
+    private final AuthorityRepository authorityRepository;
+
+    public AdminMenuPermissionResource(SecMenuPermissionStore secMenuPermissionStore, AuthorityRepository authorityRepository) {
+        this.secMenuPermissionStore = secMenuPermissionStore;
+        this.authorityRepository = authorityRepository;
+    }
+
+    /**
+     * {@code POST /api/admin/sec/menu-permissions} : Create a new menu permission.
+     *
+     * @param dto the menu permission to create.
+     * @return the {@link ResponseEntity} with status {@code 201 (Created)} and the new permission, or {@code 400} if role not found.
+     * @throws URISyntaxException if the Location URI syntax is incorrect.
+     */
+    @PostMapping("")
+    public ResponseEntity<SecMenuPermissionDTO> createMenuPermission(@Valid @RequestBody SecMenuPermissionDTO dto)
+        throws URISyntaxException {
+        LOG.debug("REST request to create SecMenuPermission : {}", dto);
+        if (authorityRepository.findById(dto.getRole()).isEmpty()) {
+            throw new BadRequestAlertException("Role not found", ENTITY_NAME, "roleNotFound");
+        }
+        String effect = (dto.getEffect() == null || dto.getEffect().isBlank()) ? "ALLOW" : dto.getEffect();
+        SecMenuPermission entity = new SecMenuPermission()
+            .role(dto.getRole())
+            .appName(parseAppName(dto.getAppName()))
+            .menuId(dto.getMenuId())
+            .effect(effect);
+        entity = secMenuPermissionStore.save(entity);
+        SecMenuPermissionDTO result = toDto(entity);
+        return ResponseEntity.created(new URI("/api/admin/sec/menu-permissions/" + entity.getId()))
+            .headers(HeaderUtil.createEntityCreationAlert(applicationName, true, ENTITY_NAME, entity.getId().toString()))
+            .body(result);
+    }
+
+    /**
+     * {@code GET /api/admin/sec/menu-permissions} : Query menu permissions by role across all apps or one app.
+     *
+     * @param role the role to filter by.
+     * @param appName the optional application name to filter by.
+     * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of permissions.
+     */
+    @GetMapping("")
+    public ResponseEntity<List<SecMenuPermissionDTO>> getMenuPermissions(
+        @RequestParam String role,
+        @RequestParam(required = false) String appName
+    ) {
+        LOG.debug("REST request to get SecMenuPermissions for role={} with optional appName filter={}", role, appName);
+        List<SecMenuPermission> permissions =
+            appName == null || appName.isBlank()
+                ? secMenuPermissionStore.findAllByRoleOrderByAppNameAscMenuIdAsc(role)
+                : secMenuPermissionStore.findAllByRoleAndAppNameOrderByMenuIdAsc(role, parseAppName(appName));
+        List<SecMenuPermissionDTO> dtos = permissions.stream().map(this::toDto).toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+    /**
+     * {@code DELETE /api/admin/sec/menu-permissions/{id}} : Delete a menu permission.
+     *
+     * @param id the id of the permission to delete.
+     * @return the {@link ResponseEntity} with status {@code 204 (No Content)}.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteMenuPermission(@PathVariable("id") Long id) {
+        LOG.debug("REST request to delete SecMenuPermission : {}", id);
+        secMenuPermissionStore.deleteById(id);
+        return ResponseEntity.noContent()
+            .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
+            .build();
+    }
+
+    private SecMenuPermissionDTO toDto(SecMenuPermission entity) {
+        SecMenuPermissionDTO dto = new SecMenuPermissionDTO();
+        dto.setId(entity.getId());
+        dto.setRole(entity.getRole());
+        dto.setAppName(entity.getAppName().getValue());
+        dto.setMenuId(entity.getMenuId());
+        dto.setEffect(entity.getEffect());
+        return dto;
+    }
+
+    private MenuAppName parseAppName(String appName) {
+        return MenuAppName.fromValue(appName).orElseThrow(() ->
+            new BadRequestAlertException("Invalid menu app name", ENTITY_NAME, "appNameInvalid")
+        );
+    }
+}

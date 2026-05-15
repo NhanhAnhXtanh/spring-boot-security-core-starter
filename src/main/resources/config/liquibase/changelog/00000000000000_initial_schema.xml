@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="00000000000001" author="system">
+        <loadData
+            file="config/liquibase/data/authority.csv"
+            separator=","
+            tableName="sec_authority">
+            <column name="name" type="STRING"/>
+        </loadData>
+    </changeSet>
+
+    <changeSet id="00000000000002" author="system">
+        <loadData
+            file="config/liquibase/data/user.csv"
+            separator=";"
+            tableName="sec_user">
+            <column name="id"              type="NUMERIC"/>
+            <column name="login"           type="STRING"/>
+            <column name="password_hash"   type="STRING"/>
+            <column name="first_name"      type="STRING"/>
+            <column name="last_name"       type="STRING"/>
+            <column name="email"           type="STRING"/>
+            <column name="image_url"       type="STRING"/>
+            <column name="activated"       type="BOOLEAN"/>
+            <column name="lang_key"        type="STRING"/>
+            <column name="created_by"      type="STRING"/>
+            <column name="last_modified_by" type="STRING"/>
+        </loadData>
+    </changeSet>
+
+    <changeSet id="00000000000003" author="system">
+        <loadData
+            file="config/liquibase/data/user_authority.csv"
+            separator=";"
+            tableName="sec_user_authority">
+            <column name="user_id"        type="NUMERIC"/>
+            <column name="authority_name" type="STRING"/>
+        </loadData>
+    </changeSet>
+
+</databaseChangeLog>

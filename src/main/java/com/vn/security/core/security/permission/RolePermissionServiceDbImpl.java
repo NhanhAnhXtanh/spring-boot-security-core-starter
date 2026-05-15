@@ -1,0 +1,73 @@
+package com.vn.security.core.security.permission;
+
+import com.vn.security.core.security.MergedSecurityService;
+import com.vn.security.core.security.domain.SecPermission;
+import com.vn.security.core.security.store.SecPermissionStore;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+/**
+ * Database-backed implementation of {@link RolePermissionService}.
+ * Applies default-deny plus union-of-ALLOW semantics: access is granted only when
+ * at least one matching permission record has effect ALLOW.
+ */
+@Service
+public class RolePermissionServiceDbImpl implements RolePermissionService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RolePermissionServiceDbImpl.class);
+
+    private final SecPermissionStore secPermissionStore;
+    private final MergedSecurityService mergedSecurityService;
+    private final RequestPermissionSnapshot requestPermissionSnapshot;
+
+    public RolePermissionServiceDbImpl(
+        SecPermissionStore secPermissionStore,
+        MergedSecurityService mergedSecurityService,
+        RequestPermissionSnapshot requestPermissionSnapshot
+    ) {
+        this.secPermissionStore = secPermissionStore;
+        this.mergedSecurityService = mergedSecurityService;
+        this.requestPermissionSnapshot = requestPermissionSnapshot;
+    }
+
+    @Override
+    public boolean isEntityOpPermitted(Class<?> entityClass, EntityOp op) {
+        String target = entityClass.getSimpleName().toUpperCase(Locale.ROOT);
+        // Use request-scoped snapshot when available: single matrix lookup replaces per-entity DB query.
+        if (RequestPermissionSnapshot.isRequestScopeActive()) {
+            PermissionMatrix matrix = requestPermissionSnapshot.getMatrix();
+            boolean permitted = matrix.isEntityPermitted(target, op.name());
+            if (!permitted) {
+                LOG.debug("Snapshot: no ALLOW for entity op {} on {} - access denied", op, entityClass.getSimpleName());
+            }
+            return permitted;
+        }
+        // Fallback for non-web contexts.
+        Collection<String> authorities = mergedSecurityService.getCurrentUserAuthorityNames();
+        if (authorities.isEmpty()) {
+            LOG.debug("No authorities for current user - denying entity op {} on {}", op, entityClass.getSimpleName());
+            return false;
+        }
+        return hasPermission(authorities, TargetType.ENTITY, target, op.name());
+    }
+
+    @Override
+    public boolean hasPermission(Collection<String> authorityNames, TargetType targetType, String target, String action) {
+        // For entity checks also include the wildcard target "*" so ENTITY:*:action grants all entities.
+        List<String> targets = TargetType.ENTITY.equals(targetType) ? List.of(target, "*") : List.of(target);
+        List<SecPermission> perms = secPermissionStore.findByRolesAndTargets(authorityNames, targetType, targets, action);
+        if (perms.isEmpty()) {
+            LOG.debug("No permission rows found for target={} action={} - access denied", target, action);
+            return false;
+        }
+        boolean allowed = perms.stream().anyMatch(p -> "ALLOW".equals(p.getEffect()));
+        if (!allowed) {
+            LOG.debug("No ALLOW permission found for target={} action={} - access denied", target, action);
+        }
+        return allowed;
+    }
+}

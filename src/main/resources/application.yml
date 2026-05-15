@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: security-core
+  datasource:
+    url: jdbc:postgresql://localhost:5432/security_core
+    username: postgres
+    password: 123456
+    hikari:
+      poolName: Hikari
+      auto-commit: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate.cache.region.factory_class: com.hazelcast.hibernate.HazelcastLocalCacheRegionFactory
+      hibernate.cache.use_second_level_cache: true
+      hibernate.cache.use_query_cache: false
+      hibernate.generate_statistics: false
+  liquibase:
+    change-log: classpath:config/liquibase/master.xml
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          authority-prefix: ''
+          authorities-claim-name: auth
+  mail:
+    host: localhost
+    port: 25
+    username:
+    password:
+  thymeleaf:
+    mode: HTML
+
+application:
+  security:
+    jwt:
+      base64-secret: bXktdmVyeS1sb25nLXNlY3VyaXR5LWNvcmUtc2VjcmV0LWtleS10aGF0LWlzLWRlZmluaXRlbHktbG9uZy1lbm91Z2gtZm9yLUhTNTEyLWFsZ29yaXRobS15ZXMteWVzLXllcw==
+      token-validity-in-seconds: 86400
+      token-validity-in-seconds-for-remember-me: 2592000
+  fetch-plans:
+    config: classpath:fetch-plans.yml
+  liquibase:
+    async-start: false
+  cors:
+    allowed-origins: 'http://localhost:4200,http://localhost:8100'
+    allowed-methods: '*'
+    allowed-headers: '*'
+    allow-credentials: true
+    max-age: 1800
+
+management:
+  endpoints:
+    web:
+      base-path: /management
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  info:
+    git:
+      mode: full
+  health:
+    mail:
+      enabled: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+  port: 8080
+
+springdoc:
+  show-actuator: true
