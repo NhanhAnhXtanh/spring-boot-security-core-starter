@@ -89,6 +89,10 @@ security-core:
 | `security-core.fetch-plans.config` | `classpath:fetch-plans.yml` | File định nghĩa fetch plans. |
 | `security-core.liquibase.async-start` | `false` | Bật Liquibase chạy async. |
 | `security-core.cache.enabled` | `true` | Bật/tắt Hazelcast cache. |
+| `security-core.seed.enabled` | `false` | Tạo user `admin` mặc định khi boot. **CHỈ DÙNG DEV.** |
+| `security-core.seed.username` | `admin` | Username cho seed user. |
+| `security-core.seed.password` | `admin` | Password cho seed user. |
+| `security-core.seed.email` | `admin@localhost` | Email cho seed user. |
 
 ## REST endpoints có sẵn
 
@@ -145,6 +149,37 @@ spring:
 ```
 
 Bỏ Hazelcast / Liquibase ra khỏi classpath cũng tự khiến config tương ứng không kích hoạt (nhờ `@ConditionalOnClass`).
+
+## Quick start cho DEV (auto-seed admin)
+
+Bật 1 dòng trong `application.yml` để starter tự tạo user `admin/admin` khi boot:
+
+```yaml
+security-core:
+  seed:
+    enabled: true
+```
+
+Sau khi boot:
+```bash
+curl -X POST http://localhost:8080/api/authenticate \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin","rememberMe":false}'
+```
+
+→ Trả JWT ngay.
+
+> **⚠ KHÔNG BẬT TRÊN PRODUCTION.** Default credentials là CVE category. Production phải để `enabled: false` (mặc định) và seed user thủ công qua migration.
+
+Có thể đổi mật khẩu mặc định:
+```yaml
+security-core:
+  seed:
+    enabled: true
+    username: superadmin
+    password: my-strong-dev-password
+    email: dev@example.com
+```
 
 ## Seed SQL (tuỳ chọn)
 
