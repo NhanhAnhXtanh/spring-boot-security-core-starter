@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @AutoConfiguration
 @EnableConfigurationProperties(ApplicationProperties.class)
 @ComponentScan(basePackages = "com.vn.security.core")
-@EntityScan(basePackages = "com.vn.security.core.domain")
+@EntityScan(basePackages = { "com.vn.security.core.domain", "com.vn.security.core.security.domain" })
 @EnableJpaRepositories(basePackages = "com.vn.security.core.repository")
 public class SecurityCoreAutoConfiguration {
 }
