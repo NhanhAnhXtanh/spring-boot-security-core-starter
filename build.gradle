@@ -90,6 +90,38 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
+            pom {
+                name = 'Spring Boot Security Core Starter'
+                description = 'Reusable Spring Boot starter providing JWT authentication, RBAC, auditing, fetch plans and security utilities.'
+                url = 'https://github.com/NhanhAnhXtanh/spring-boot-security-core-starter'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'NhanhAnhXtanh'
+                        name = 'NhanhAnhXtanh'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/NhanhAnhXtanh/spring-boot-security-core-starter.git'
+                    developerConnection = 'scm:git:ssh://git@github.com/NhanhAnhXtanh/spring-boot-security-core-starter.git'
+                    url = 'https://github.com/NhanhAnhXtanh/spring-boot-security-core-starter'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = uri('https://maven.pkg.github.com/NhanhAnhXtanh/spring-boot-security-core-starter')
+            credentials {
+                username = project.findProperty('gpr.user') ?: System.getenv('GITHUB_ACTOR')
+                password = project.findProperty('gpr.token') ?: System.getenv('GITHUB_TOKEN')
+            }
         }
     }
 }
