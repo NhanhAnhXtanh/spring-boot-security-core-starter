@@ -7,6 +7,9 @@ import com.vn.security.core.security.permission.RequestPermissionSnapshot;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +19,8 @@ import org.springframework.core.env.Profiles;
 
 @Configuration
 @EnableCaching
+@ConditionalOnClass(HazelcastInstance.class)
+@ConditionalOnProperty(prefix = "security-core.cache", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class CacheConfiguration {
 
     private static final Logger LOG = LoggerFactory.getLogger(CacheConfiguration.class);
@@ -35,12 +40,14 @@ public class CacheConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(CacheManager.class)
     public CacheManager cacheManager(HazelcastInstance hazelcastInstance) {
         LOG.debug("Starting HazelcastCacheManager");
         return new com.hazelcast.spring.cache.HazelcastCacheManager(hazelcastInstance);
     }
 
     @Bean
+    @ConditionalOnMissingBean(HazelcastInstance.class)
     public HazelcastInstance hazelcastInstance() {
         LOG.debug("Configuring Hazelcast");
         HazelcastInstance hazelCastInstance = Hazelcast.getHazelcastInstanceByName("security-core");
