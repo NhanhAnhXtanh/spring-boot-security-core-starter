@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.vn.security.core'
-version = '0.0.1-SNAPSHOT'
+version = '0.0.4-SNAPSHOT'
 description = 'security-core'
 
 java {

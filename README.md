@@ -53,7 +53,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.vn.security.core:security-core:0.0.1-SNAPSHOT'
+    implementation 'com.vn.security.core:security-core:0.0.4-SNAPSHOT'
 }
 ```
 
@@ -63,7 +63,7 @@ dependencies {
 <dependency>
     <groupId>com.vn.security.core</groupId>
     <artifactId>security-core</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.4-SNAPSHOT</version>
 </dependency>
 ```
 
