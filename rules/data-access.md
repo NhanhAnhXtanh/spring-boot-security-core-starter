@@ -190,6 +190,18 @@ Entity `implements Serializable` thuần, không cần audit. Pattern này dùng
 
 > **Tóm lại:** Cả 3 lựa chọn đều hợp lệ. Yêu cầu duy nhất là entity phải có annotation `@SecuredEntity`. Starter **không can thiệp** vào việc consumer chọn superclass nào.
 
+> ⚠️ **Quan trọng — đừng nhầm lẫn 2 chuyện:**
+>
+> **Superclass = metadata columns** (audit / soft-delete / tenant). **Không bypass** `SecureDataManager`.
+>
+> **Path truy cập DB = `SecureDataManager` (mặc định) hoặc `UnconstrainedDataManager` (code hệ thống)** — quyết định bởi tình huống nghiệp vụ ở §1 & §2, **không phải** bởi việc entity extend class nào.
+>
+> Dù entity dùng `BaseEntity` riêng, `AbstractAuditingEntity`, hay không extend gì:
+> - CRUD theo user request → vẫn phải đi qua `SecureDataManager`.
+> - Code hệ thống (bootstrap / migration / job / row-policy evaluator / scheduled task không có user context) → dùng `UnconstrainedDataManager` (kèm comment lý do, xem §2).
+>
+> Không có cách nào bypass `SecureDataManager` bằng việc đổi superclass. Bypass hợp lệ duy nhất là `UnconstrainedDataManager`, và chỉ trong các trường hợp đã liệt kê ở §2.
+
 ### 3.3. KHÔNG được làm
 
 - Không inject custom `EntityManagerFactory` thay thế của starter — sẽ phá hỏng auditing listener, transaction manager, và metamodel-based catalog. Dùng đúng `EntityManager` do starter cấu hình.
