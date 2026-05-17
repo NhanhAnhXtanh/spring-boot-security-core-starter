@@ -157,15 +157,38 @@ Cùng với annotation, consumer phải:
 
 Chi tiết: [`entity-onboarding.md`](entity-onboarding.md).
 
-### 3.2. TUỲ CHỌN: extend `AbstractAuditingEntity<ID>`
+### 3.2. TUỲ CHỌN: superclass cho audit / base entity
 
-Chỉ extend khi entity **cần audit fields** (`createdBy`, `createdDate`, `lastModifiedBy`, `lastModifiedDate`). Khi extend:
+Chỉ ràng buộc duy nhất ở mức class là `@SecuredEntity`. Việc chọn superclass là **quyền của consumer**:
+
+**Lựa chọn A — Consumer đã có `BaseEntity` riêng (audit, soft-delete, multi-tenancy, ID strategy, …):**
+
+- **Giữ nguyên `BaseEntity` của consumer.** KHÔNG bắt buộc đổi sang `AbstractAuditingEntity` của starter.
+- Starter không yêu cầu cột audit cố định — `SecureDataManager` / catalog / fetch plan hoạt động dựa trên `@SecuredEntity` + JPA metamodel, không phụ thuộc class cha.
+- Nếu `BaseEntity` của consumer đã tự xử lý audit (qua `@MappedSuperclass` + `@EntityListeners(AuditingEntityListener.class)` hoặc cơ chế khác) → đó là pattern hợp lệ, không cần làm gì thêm.
+
+```java
+@SecuredEntity
+@Entity
+@Table(name = "acme_invoice")
+public class Invoice extends com.acme.app.domain.BaseEntity {   // BaseEntity của consumer
+    // ...
+}
+```
+
+**Lựa chọn B — Extend `AbstractAuditingEntity<ID>` của starter:**
+
+Chọn khi consumer **chưa có** BaseEntity và muốn dùng luôn audit fields (`createdBy`, `createdDate`, `lastModifiedBy`, `lastModifiedDate`) có sẵn. Khi extend:
 
 - Phải override `getId()` với kiểu generic đúng.
 - KHÔNG định nghĩa lại các cột audit — đã có sẵn ở superclass.
-- Cần `AuditingEntityListener` được kích hoạt (starter auto-config sẵn, không cần làm gì thêm).
+- `AuditingEntityListener` được starter auto-config, không cần khai thêm.
 
-Trong starter hiện tại: `User` extend `AbstractAuditingEntity`; còn `Organization`, `Department`, `Employee` không extend. Cả hai pattern đều hợp lệ.
+**Lựa chọn C — Không extend gì cả:**
+
+Entity `implements Serializable` thuần, không cần audit. Pattern này dùng phổ biến trong starter (`Organization`, `Department`, `Employee`).
+
+> **Tóm lại:** Cả 3 lựa chọn đều hợp lệ. Yêu cầu duy nhất là entity phải có annotation `@SecuredEntity`. Starter **không can thiệp** vào việc consumer chọn superclass nào.
 
 ### 3.3. KHÔNG được làm
 

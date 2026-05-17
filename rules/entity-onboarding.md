@@ -48,7 +48,13 @@ public class Invoice implements Serializable {
 }
 ```
 
-**Tuỳ chọn:** nếu cần audit (`createdBy`, `createdDate`, `lastModifiedBy`, `lastModifiedDate`) → extend `AbstractAuditingEntity<Long>` thay vì `implements Serializable`. Nếu không cần → để như mẫu trên.
+**Về superclass (tuỳ chọn — starter không ép buộc):**
+
+- Nếu consumer **đã có `BaseEntity` riêng** (audit, soft-delete, multi-tenant, ID strategy chung, …) → **giữ nguyên**, `extends YourBaseEntity`. KHÔNG cần đổi sang `AbstractAuditingEntity`. Starter chỉ yêu cầu `@SecuredEntity`, không quan tâm class cha.
+- Nếu consumer **chưa có** BaseEntity và muốn dùng luôn audit fields có sẵn → `extends AbstractAuditingEntity<Long>` của starter.
+- Không cần audit, không có BaseEntity → giữ `implements Serializable` như mẫu trên.
+
+Xem [`data-access.md` §3.2](data-access.md) để biết chi tiết 3 lựa chọn.
 
 ### Bước 2 — Đảm bảo entity được JPA scan
 
@@ -191,8 +197,10 @@ Nếu 403 mọi nơi → check Bước 4 (seed permission). Nếu "entity not re
 
 ### Thứ tự bắt buộc (đừng đảo bước)
 
-1. **Add `@SecuredEntity` lên class entity** + (tuỳ chọn) extend `AbstractAuditingEntity<ID>`.
-   - Nếu extend `AbstractAuditingEntity` → schema cần thêm 4 cột audit. Viết migration Liquibase add cột với default sensible (ví dụ `created_by = 'system'`, `created_date = now()`).
+1. **Add `@SecuredEntity` lên class entity.** Đây là yêu cầu **duy nhất** ở mức class. Superclass giữ nguyên theo hiện trạng consumer:
+   - Đã có `BaseEntity` riêng → giữ. KHÔNG ép sang `AbstractAuditingEntity`.
+   - Chưa có và muốn audit → có thể extend `AbstractAuditingEntity<ID>`. Khi đó schema cần thêm 4 cột audit; viết migration Liquibase add cột với default sensible (ví dụ `created_by = 'system'`, `created_date = now()`).
+   - Không cần audit, không có BaseEntity → `implements Serializable` là đủ.
 2. **Bổ sung `@EntityScan`** nếu entity nằm ngoài package starter (thường đã có sẵn từ trước).
 3. **Seed permission** cho entity (Bước 4 ở mục A). Không bỏ — nếu thiếu, user nào cũng bị 403 sau khi switch.
 4. **Khai fetch plans** (Bước 5 ở mục A).
@@ -217,7 +225,7 @@ Nếu 403 mọi nơi → check Bước 4 (seed permission). Nếu "entity not re
 
 - [ ] Entity có `@SecuredEntity` (+ `code`/`jpqlAllowed` đúng nhu cầu)?
 - [ ] Package entity nằm trong `@EntityScan` của consumer?
-- [ ] Có migration tạo bảng (và migration thêm cột audit nếu extend `AbstractAuditingEntity`)?
+- [ ] Có migration tạo bảng (và migration thêm cột audit nếu extend `AbstractAuditingEntity` — không bắt buộc nếu consumer dùng BaseEntity riêng)?
 - [ ] Có seed permission đầy đủ `READ/CREATE/UPDATE/DELETE` cho role cần thiết?
 - [ ] Có fetch plan `{code}-list` và `{code}-detail` (hoặc custom codes khớp annotation)?
 - [ ] Service dùng `SecureDataManager`, không tạo `JpaRepository` mới?
