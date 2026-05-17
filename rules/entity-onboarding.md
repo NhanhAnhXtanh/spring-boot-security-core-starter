@@ -1,0 +1,238 @@
+# Rule: Thêm hoặc Refactor Entity trong consumer dùng `security-core` starter
+
+> Bổ sung cho [`data-access.md`](data-access.md). Đọc data-access trước.
+
+---
+
+## Nguyên tắc nền (đọc lại trước khi thêm entity)
+
+- **Persistence layer cho entity nghiệp vụ = `EntityManager` của starter** (gián tiếp qua `SecureDataManager` / `UnconstrainedDataManager`).
+- **`JpaRepository` đã đóng tập** — chỉ `UserRepository` và `AuthorityRepository` (do starter sở hữu). Consumer **không tạo `JpaRepository` mới**. Mọi entity mới phải đi đường EntityManager.
+- Marker để vào hệ thống quyền = annotation **`@SecuredEntity`** trên class JPA.
+
+---
+
+## A. Quy trình thêm 1 entity mới trong consumer
+
+Làm theo đúng 6 bước. Bỏ bước nào cũng vỡ một phần (entity không CRUD được, không có quyền, hoặc bị deny ngầm).
+
+### Bước 1 — Tạo class entity JPA + annotate `@SecuredEntity`
+
+```java
+package com.acme.app.domain;
+
+import com.vn.security.core.security.catalog.SecuredEntity;
+import jakarta.persistence.*;
+import java.io.Serial;
+import java.io.Serializable;
+
+@SecuredEntity(jpqlAllowed = false)        // bắt buộc. jpqlAllowed = true chỉ khi service cần loadByQuery JPQL custom
+@Entity
+@Table(name = "acme_invoice")              // consumer tự chọn prefix; tránh đụng table starter (sec_*, proof_*)
+public class Invoice implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sequenceGenerator")
+    @SequenceGenerator(name = "sequenceGenerator")
+    @Column(name = "id")
+    private Long id;
+
+    @Column(name = "number", nullable = false, unique = true, length = 50)
+    private String number;
+
+    // getters/setters
+    // equals dựa trên id, hashCode dựa trên class — copy mẫu từ Department.java
+}
+```
+
+**Tuỳ chọn:** nếu cần audit (`createdBy`, `createdDate`, `lastModifiedBy`, `lastModifiedDate`) → extend `AbstractAuditingEntity<Long>` thay vì `implements Serializable`. Nếu không cần → để như mẫu trên.
+
+### Bước 2 — Đảm bảo entity được JPA scan
+
+Starter chỉ scan `com.vn.security.core.domain` và `com.vn.security.core.security.domain`. Entity của consumer (ví dụ `com.acme.app.domain`) sẽ **không bị scan** nếu consumer không khai bổ sung.
+
+Trong main `@SpringBootApplication` của consumer:
+
+```java
+@SpringBootApplication
+@EntityScan(basePackages = {
+    "com.vn.security.core.domain",         // entity của starter — bắt buộc giữ
+    "com.vn.security.core.security.domain",
+    "com.acme.app.domain"                  // entity của consumer
+})
+public class Application {
+    public static void main(String[] args) { SpringApplication.run(Application.class, args); }
+}
+```
+
+Thiếu bước này → `MetamodelSecuredEntityCatalog` không thấy entity, `SecureDataManager` reject với "entity not registered".
+
+### Bước 3 — Migration tạo bảng (Liquibase)
+
+Consumer dùng Liquibase changelog riêng, include vào `db/changelog/master.xml`. Đảm bảo schema khớp `@Column` đã khai trong entity.
+
+### Bước 4 — Seed permission
+
+Mỗi entity cần record trong `sec_permission`. Tạo file `db/seed/seed-invoice-permissions.sql`:
+
+```sql
+INSERT INTO sec_permission (id, authority_name, action, target, target_type, effect)
+VALUES
+  (1001, 'ROLE_ADMIN', 'READ',   'com.acme.app.domain.Invoice', 'ENTITY', 'ALLOW'),
+  (1002, 'ROLE_ADMIN', 'CREATE', 'com.acme.app.domain.Invoice', 'ENTITY', 'ALLOW'),
+  (1003, 'ROLE_ADMIN', 'UPDATE', 'com.acme.app.domain.Invoice', 'ENTITY', 'ALLOW'),
+  (1004, 'ROLE_ADMIN', 'DELETE', 'com.acme.app.domain.Invoice', 'ENTITY', 'ALLOW'),
+  (1005, 'ROLE_USER',  'READ',   'com.acme.app.domain.Invoice', 'ENTITY', 'ALLOW')
+ON CONFLICT (id) DO NOTHING;
+```
+
+Reference từ Liquibase changelog:
+```xml
+<changeSet id="seed-invoice-permissions" author="acme">
+    <sqlFile path="db/seed/seed-invoice-permissions.sql" relativeToChangelogFile="false"/>
+</changeSet>
+```
+
+Quy ước:
+- `target` = **FQCN** của entity (không phải table name, không phải code).
+- `target_type = 'ENTITY'`.
+- ID dùng dải riêng của consumer (ví dụ ≥ 1000) để tránh đụng seed của starter (ID 1–15).
+
+### Bước 5 — Khai fetch plans
+
+Mặc định `@SecuredEntity` tự sinh 2 code: `invoice-list` và `invoice-detail`. Phải có entry tương ứng trong `fetch-plans.yml` (file consumer chỉ đến qua `security-core.fetch-plans.config`):
+
+```yaml
+fetch-plans:
+  - entity: com.acme.app.domain.Invoice
+    name: invoice-list
+    properties:
+      - id
+      - number
+      - issuedDate
+
+  - entity: com.acme.app.domain.Invoice
+    name: invoice-detail
+    extends: invoice-list
+    properties:
+      - totalAmount
+      - name: customer
+        properties:
+          - id
+          - name
+```
+
+Nếu muốn fetch plan khác tên → đổi `fetchPlanCodes` trong annotation `@SecuredEntity`.
+
+### Bước 6 — Service + REST resource
+
+Service: copy nguyên pattern từ `DepartmentService` (xem [`data-access.md`](data-access.md) §1). Không tạo `InvoiceRepository extends JpaRepository`. Chỉ inject `SecureDataManager` (+ `EntityManager` nếu cần resolve reference).
+
+```java
+@Service
+@Transactional
+public class InvoiceService {
+
+    private static final Class<Invoice> ENTITY_CLASS = Invoice.class;
+
+    private final SecureDataManager secureDataManager;
+    private final EntityManager entityManager;
+
+    public InvoiceService(SecureDataManager secureDataManager, EntityManager entityManager) {
+        this.secureDataManager = secureDataManager;
+        this.entityManager = entityManager;
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Invoice> list(Pageable pageable) {
+        return secureDataManager.loadList(ENTITY_CLASS, pageable);
+    }
+
+    public Invoice create(EntityMutation<Invoice> mutation) {
+        return secureDataManager.save(ENTITY_CLASS, null, mutation);
+    }
+
+    public Invoice update(Long id, EntityMutation<Invoice> mutation) {
+        return secureDataManager.save(ENTITY_CLASS, id, mutation);
+    }
+
+    public void delete(Long id) {
+        secureDataManager.delete(ENTITY_CLASS, id);
+    }
+}
+```
+
+REST resource: copy theo `DepartmentResource`.
+
+### Smoke test 1 phút sau khi xong 6 bước
+
+```bash
+# login admin → lấy JWT
+curl -X POST http://localhost:8080/api/authenticate \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"admin"}'
+
+# list invoice (kỳ vọng 200, page rỗng)
+curl http://localhost:8080/api/invoices -H "Authorization: Bearer $JWT"
+
+# login ROLE_USER → kỳ vọng list được (READ allow), create bị 403 (chưa cấp CREATE)
+```
+
+Nếu 403 mọi nơi → check Bước 4 (seed permission). Nếu "entity not registered" → check Bước 2 (`@EntityScan`).
+
+---
+
+## B. Refactor entity cũ trong consumer sang pattern này
+
+Áp dụng khi consumer đã có entity X dùng `JpaRepository<X, ?>` từ trước và muốn chuyển sang quản lý qua `SecureDataManager`.
+
+### Thứ tự bắt buộc (đừng đảo bước)
+
+1. **Add `@SecuredEntity` lên class entity** + (tuỳ chọn) extend `AbstractAuditingEntity<ID>`.
+   - Nếu extend `AbstractAuditingEntity` → schema cần thêm 4 cột audit. Viết migration Liquibase add cột với default sensible (ví dụ `created_by = 'system'`, `created_date = now()`).
+2. **Bổ sung `@EntityScan`** nếu entity nằm ngoài package starter (thường đã có sẵn từ trước).
+3. **Seed permission** cho entity (Bước 4 ở mục A). Không bỏ — nếu thiếu, user nào cũng bị 403 sau khi switch.
+4. **Khai fetch plans** (Bước 5 ở mục A).
+5. **Refactor service**: thay mọi call `xRepository.findAll/findById/save/delete` bằng `secureDataManager.loadList/loadOne/save/delete`. Save phải bọc `EntityMutation`.
+6. **Refactor controller/resource** nếu nó đang inject `xRepository` thẳng (anti-pattern) — di chuyển logic xuống service.
+7. **Xóa `XRepository.java`** (file `interface XRepository extends JpaRepository<...>`). Để tồn tại = mời người khác inject lại = vô hiệu hoá rule.
+8. **Chạy test + smoke test** như mục A.
+
+### Bẫy hay gặp khi refactor
+
+| Triệu chứng | Nguyên nhân | Cách sửa |
+|---|---|---|
+| `AccessDeniedException` ngay cả với admin | Quên seed permission cho FQCN của entity | Bước 3 |
+| `Entity not registered in catalog` | Thiếu `@SecuredEntity` hoặc thiếu `@EntityScan` cho package | Bước 1 + 2 |
+| Save thành công nhưng cột nào cũng update được, attribute-level check bị bỏ qua | Không truyền `changedAttributes` trong `EntityMutation` | Refactor service: lấy danh sách attr thật sự thay đổi từ request body |
+| Fetch plan code không tồn tại | Quên thêm vào `fetch-plans.yml` hoặc đặt sai `code` | Bước 4 / chỉnh `code` trong `@SecuredEntity` |
+| Cũ vẫn dùng `xRepository` đâu đó | Search chưa kỹ | `grep -rn "XRepository" src/` rồi xóa hết |
+
+---
+
+## C. Checklist tổng kết (review PR thêm/refactor entity)
+
+- [ ] Entity có `@SecuredEntity` (+ `code`/`jpqlAllowed` đúng nhu cầu)?
+- [ ] Package entity nằm trong `@EntityScan` của consumer?
+- [ ] Có migration tạo bảng (và migration thêm cột audit nếu extend `AbstractAuditingEntity`)?
+- [ ] Có seed permission đầy đủ `READ/CREATE/UPDATE/DELETE` cho role cần thiết?
+- [ ] Có fetch plan `{code}-list` và `{code}-detail` (hoặc custom codes khớp annotation)?
+- [ ] Service dùng `SecureDataManager`, không tạo `JpaRepository` mới?
+- [ ] Save dùng `EntityMutation` với `changedAttributes` đúng từ body request?
+- [ ] Reference field được resolve qua `secureDataManager.loadOne` trước, rồi mới `entityManager.find`?
+- [ ] (Refactor) Đã xóa file `XRepository.java` cũ?
+
+---
+
+## D. Tham chiếu code mẫu
+
+- Entity gốc: `com.vn.security.core.domain.Department` / `Employee` / `Organization` (không extend AbstractAuditing) — pattern phổ biến.
+- Entity có audit: `com.vn.security.core.domain.User` (extend `AbstractAuditingEntity<Long>`).
+- Service: `com.vn.security.core.service.DepartmentService`.
+- REST: `com.vn.security.core.web.rest.DepartmentResource`.
+- Catalog scanner: `com.vn.security.core.security.catalog.MetamodelSecuredEntityCatalog`.
+- Seed permission mẫu: `src/main/resources/db/seed/seed-permissions.sql`.
+- Fetch plan mẫu: `src/main/resources/fetch-plans.yml`.

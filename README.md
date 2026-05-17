@@ -1,10 +1,40 @@
 # Spring Boot Security Core Starter
 
-Reusable Spring Boot starter cung cấp sẵn JWT authentication, RBAC, auditing, fetch plans và security utilities.
+Reusable Spring Boot starter cung cấp sẵn JWT authentication, RBAC (role + permission + row-policy + attribute-level), auditing, fetch plans và security utilities cho các microservice nội bộ.
 
 - Spring Boot 4.0.x
 - Java 21
 - Auto-configuration: tự kích hoạt khi add dependency
+- Repo: <https://github.com/NhanhAnhXtanh/spring-boot-security-core-starter>
+
+## Mục lục
+
+- [Tính năng chính](#tính-năng-chính)
+- [Cài đặt](#cài-đặt)
+- [Cấu hình tối thiểu](#cấu-hình-tối-thiểu)
+- [Properties tham khảo](#properties-tham-khảo)
+- [REST endpoints có sẵn](#rest-endpoints-có-sẵn)
+- [Rules bắt buộc cho consumer project](#rules-bắt-buộc-cho-consumer-project) ← **đọc trước khi viết code**
+- [Override bean mặc định](#override-bean-mặc-định)
+- [Tắt từng auto-config](#tắt-từng-auto-config)
+- [Quick start cho DEV (auto-seed admin)](#quick-start-cho-dev-auto-seed-admin)
+- [Seed SQL (tuỳ chọn)](#seed-sql-tuỳ-chọn)
+- [Build từ source](#build-từ-source)
+- [License](#license)
+
+## Tính năng chính
+
+| Module | Mô tả |
+|---|---|
+| **JWT authentication** | HS512, login `/api/authenticate`, register `/api/register`, activate, reset password. |
+| **RBAC + ABAC** | `@SecuredEntity` + `SecuredEntityCatalog` + permission table `sec_permission` (action × target × authority × effect). |
+| **Row-level security** | Row policy evaluator áp filter trên mọi `SecureDataManager.loadList/loadOne`. |
+| **Attribute-level check** | `EntityMutation.changedAttributes` quyết định cột nào được phép set. |
+| **Fetch plans** | `fetch-plans.yml` — entity → projection (giảm over-fetch, kiểm soát serialization). |
+| **Auditing** | `AbstractAuditingEntity` + `SpringSecurityAuditorAware` (createdBy/Date, lastModifiedBy/Date). |
+| **CORS / Security headers** | Cấu hình qua `security-core.cors.*`. |
+| **Cache (Hazelcast)** | Bật/tắt qua `security-core.cache.enabled`. |
+| **Liquibase migrations** | Schema `sec_*` chạy sẵn khi consumer trỏ `change-log: classpath:config/liquibase/master.xml`. |
 
 ## Cài đặt
 
@@ -107,6 +137,28 @@ security-core:
 | `*` | `/api/admin/**` | Yêu cầu authority `ROLE_ADMIN`. |
 | `*` | `/api/**` | Yêu cầu authenticated. |
 
+## Rules bắt buộc cho consumer project
+
+> **Đây là phần quan trọng nhất cho người mới / AI assistant.** Đọc trước khi viết bất kỳ entity / service / controller nào trong project consumer. Vi phạm các rule này sẽ phá vỡ RBAC, row-level filter, audit, hoặc fetch plan của starter.
+
+| Tài liệu | Khi nào đọc | Tóm tắt |
+|---|---|---|
+| [`rules/data-access.md`](rules/data-access.md) | Trước khi viết bất kỳ code đụng DB | Bắt buộc dùng `SecureDataManager` (CRUD nghiệp vụ) hoặc `UnconstrainedDataManager` (system/bootstrap/migration). **Không tạo thêm `JpaRepository`** ngoài `UserRepository` và `AuthorityRepository`. |
+| [`rules/entity-onboarding.md`](rules/entity-onboarding.md) | Khi thêm entity mới hoặc refactor entity cũ | Quy trình 6 bước: tạo entity + `@SecuredEntity` → `@EntityScan` → migration → seed permission → fetch plan → service/REST. Có checklist review PR và bảng "bẫy hay gặp". |
+
+### Cheat-sheet 30 giây
+
+```
+Code đụng DB?
+├─ User request (REST/GraphQL)?    → SecureDataManager
+├─ Bootstrap/seed/migration/job?   → UnconstrainedDataManager (+ comment lý do)
+├─ Đang implement check permission? → UnconstrainedDataManager (recursion guard)
+└─ Khi nghi ngờ                     → SecureDataManager (an toàn hơn)
+
+Entity mới?
+└─ @SecuredEntity (bắt buộc) + @EntityScan package + seed sec_permission + fetch-plans.yml
+```
+
 ## Override bean mặc định
 
 Hầu hết bean của starter đều dùng `@ConditionalOnMissingBean`. Khai báo bean cùng type trong consumer là override luôn:
@@ -195,10 +247,26 @@ Tham chiếu từ Liquibase changelog của consumer nếu muốn dùng:
 
 ## Build từ source
 
+Clone repo và build:
+
 ```bash
+git clone https://github.com/NhanhAnhXtanh/spring-boot-security-core-starter.git
+cd spring-boot-security-core-starter
 ./gradlew clean build -x test
-./gradlew publishToMavenLocal
+./gradlew publishToMavenLocal     # cài vào ~/.m2 để consumer test local
 ```
+
+Yêu cầu: JDK 21 (đã có Gradle wrapper, không cần cài Gradle riêng).
+
+## Đóng góp
+
+PR phải tuân thủ rule trong [`rules/`](rules/). Trước khi mở PR, chạy local:
+
+```bash
+./gradlew check
+```
+
+Báo issue: <https://github.com/NhanhAnhXtanh/spring-boot-security-core-starter/issues>
 
 ## License
 
