@@ -85,9 +85,6 @@ public class ExceptionTranslator extends ResponseEntityExceptionHandler {
         if (ex instanceof com.vn.security.core.service.UsernameAlreadyUsedException) {
             return (ProblemDetailWithCause) new LoginAlreadyUsedException().getBody();
         }
-        if (ex instanceof com.vn.security.core.service.EmailAlreadyUsedException) {
-            return (ProblemDetailWithCause) new EmailAlreadyUsedException().getBody();
-        }
         if (ex instanceof com.vn.security.core.service.InvalidPasswordException) {
             return (ProblemDetailWithCause) new InvalidPasswordException().getBody();
         }

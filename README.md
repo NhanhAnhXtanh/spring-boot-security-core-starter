@@ -26,7 +26,7 @@ Reusable Spring Boot starter cung cấp sẵn JWT authentication, RBAC (role + p
 
 | Module | Mô tả |
 |---|---|
-| **JWT authentication** | HS512, login `/api/authenticate`, register `/api/register`, activate, reset password. |
+| **JWT authentication** | HS512, login `/api/authenticate`, register `/api/register`, change password. (Email-based activation và reset password đã được bỏ — xem bug #001.) |
 | **RBAC + ABAC** | `@SecuredEntity` + `SecuredEntityCatalog` + permission table `sec_permission` (action × target × authority × effect). |
 | **Row-level security** | Row policy evaluator áp filter trên mọi `SecureDataManager.loadList/loadOne`. |
 | **Attribute-level check** | `EntityMutation.changedAttributes` quyết định cột nào được phép set. |
@@ -122,7 +122,6 @@ security-core:
 | `security-core.seed.enabled` | `false` | Tạo user `admin` mặc định khi boot. **CHỈ DÙNG DEV.** |
 | `security-core.seed.username` | `admin` | Username cho seed user. |
 | `security-core.seed.password` | `admin` | Password cho seed user. |
-| `security-core.seed.email` | `admin@localhost` | Email cho seed user. |
 
 ## REST endpoints có sẵn
 
@@ -130,12 +129,16 @@ security-core:
 |---|---|---|
 | POST | `/api/authenticate` | Login → trả JWT. |
 | GET | `/api/authenticate` | Check user hiện tại có authenticated không. |
-| POST | `/api/register` | Đăng ký account. |
-| GET | `/api/activate` | Kích hoạt account qua key. |
-| POST | `/api/account/reset-password/init` | Yêu cầu reset password. |
-| POST | `/api/account/reset-password/finish` | Hoàn tất reset password. |
+| POST | `/api/register` | Đăng ký account (active ngay, không cần xác nhận qua email). |
+| GET | `/api/account` | Lấy thông tin user hiện tại. |
+| POST | `/api/account` | Cập nhật thông tin cá nhân (firstName, lastName, langKey, imageUrl). |
+| POST | `/api/account/change-password` | Đổi mật khẩu hiện tại. |
 | `*` | `/api/admin/**` | Yêu cầu authority `ROLE_ADMIN`. |
 | `*` | `/api/**` | Yêu cầu authenticated. |
+
+> Email-driven endpoints (`/api/activate`, `/api/account/reset-password/init`,
+> `/api/account/reset-password/finish`) đã bị bỏ cùng với email feature (bug #001).
+> Reset password chỉ làm thủ công qua admin endpoint `PUT /api/admin/users/{login}`.
 
 ## Rules bắt buộc cho consumer project
 
@@ -230,7 +233,6 @@ security-core:
     enabled: true
     username: superadmin
     password: my-strong-dev-password
-    email: dev@example.com
 ```
 
 ## Seed SQL (tuỳ chọn)

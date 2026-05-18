@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Seeds a default admin user on startup when {@code security-core.seed.enabled=true}.
  * Idempotent — skips if the configured username already exists.
  *
+ * <p>Email property đã được bỏ cùng với email feature (bug #001).</p>
+ *
  * <p><b>Never enable in production.</b> Default credentials are a known CVE vector.
  */
 @Component
@@ -66,7 +68,6 @@ public class SecurityCoreSeedRunner implements ApplicationRunner {
         user.setPassword(passwordEncoder.encode(seed.getPassword()));
         user.setFirstName("Default");
         user.setLastName("Admin");
-        user.setEmail(seed.getEmail());
         user.setActivated(true);
         user.setLangKey("en");
 

@@ -3,13 +3,11 @@ package com.vn.security.core.domain;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.vn.security.core.config.Constants;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.io.Serial;
 import java.io.Serializable;
-import java.time.Instant;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -20,6 +18,10 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 /**
  * A user.
+ *
+ * <p>Email và activation/reset-key flow đã được bỏ khỏi starter (bug #001).
+ * Account được tạo ra ở trạng thái {@code activated=true} ngay — admin tự quyết định
+ * có muốn flip {@code activated=false} thủ công hay không.</p>
  */
 @Entity
 @Table(name = "sec_user")
@@ -55,14 +57,9 @@ public class User extends AbstractAuditingEntity<Long> implements Serializable {
     @Column(name = "last_name", length = 50)
     private String lastName;
 
-    @Email
-    @Size(min = 5, max = 254)
-    @Column(name = "email", length = 254, unique = true)
-    private String email;
-
     @NotNull
     @Column(name = "activated", nullable = false)
-    private boolean activated = false;
+    private boolean activated = true;
 
     @Size(min = 2, max = 10)
     @Column(name = "lang_key", length = 10)
@@ -71,19 +68,6 @@ public class User extends AbstractAuditingEntity<Long> implements Serializable {
     @Size(max = 256)
     @Column(name = "image_url", length = 256)
     private String imageUrl;
-
-    @Size(max = 20)
-    @Column(name = "activation_key", length = 20)
-    @JsonIgnore
-    private String activationKey;
-
-    @Size(max = 20)
-    @Column(name = "reset_key", length = 20)
-    @JsonIgnore
-    private String resetKey;
-
-    @Column(name = "reset_date")
-    private Instant resetDate = null;
 
     @JsonIgnore
     @ManyToMany
@@ -137,14 +121,6 @@ public class User extends AbstractAuditingEntity<Long> implements Serializable {
         this.lastName = lastName;
     }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
     public String getImageUrl() {
         return imageUrl;
     }
@@ -159,30 +135,6 @@ public class User extends AbstractAuditingEntity<Long> implements Serializable {
 
     public void setActivated(boolean activated) {
         this.activated = activated;
-    }
-
-    public String getActivationKey() {
-        return activationKey;
-    }
-
-    public void setActivationKey(String activationKey) {
-        this.activationKey = activationKey;
-    }
-
-    public String getResetKey() {
-        return resetKey;
-    }
-
-    public void setResetKey(String resetKey) {
-        this.resetKey = resetKey;
-    }
-
-    public Instant getResetDate() {
-        return resetDate;
-    }
-
-    public void setResetDate(Instant resetDate) {
-        this.resetDate = resetDate;
     }
 
     public String getLangKey() {
@@ -225,11 +177,9 @@ public class User extends AbstractAuditingEntity<Long> implements Serializable {
             "login='" + login + '\'' +
             ", firstName='" + firstName + '\'' +
             ", lastName='" + lastName + '\'' +
-            ", email='" + email + '\'' +
             ", imageUrl='" + imageUrl + '\'' +
             ", activated='" + activated + '\'' +
             ", langKey='" + langKey + '\'' +
-            ", activationKey='" + activationKey + '\'' +
             "}";
     }
 }

@@ -3,8 +3,10 @@ package com.vn.security.core.security;
 import com.vn.security.core.domain.Authority;
 import com.vn.security.core.domain.User;
 import com.vn.security.core.repository.UserRepository;
-import java.util.*;
-import org.hibernate.validator.internal.constraintvalidators.bv.EmailValidator;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.GrantedAuthority;
@@ -18,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Authenticate a user from the database.
+ *
+ * <p>Login bằng email đã bị bỏ cùng với email feature (bug #001). Chỉ chấp nhận {@code login}
+ * (case-insensitive — chuẩn hóa lowercase).</p>
  */
 @Component("userDetailsService")
 public class DomainUserDetailsService implements UserDetailsService {
@@ -34,14 +39,6 @@ public class DomainUserDetailsService implements UserDetailsService {
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(final String login) {
         LOG.debug("Authenticating {}", login);
-
-        if (new EmailValidator().isValid(login, null)) {
-            return userRepository
-                .findOneWithAuthoritiesByEmailIgnoreCase(login)
-                .map(user -> createSpringSecurityUser(login, user))
-                .orElseThrow(() -> new UsernameNotFoundException("User with email " + login + " was not found in the database"));
-        }
-
         String lowercaseLogin = login.toLowerCase(Locale.ENGLISH);
         return userRepository
             .findOneWithAuthoritiesByLogin(lowercaseLogin)

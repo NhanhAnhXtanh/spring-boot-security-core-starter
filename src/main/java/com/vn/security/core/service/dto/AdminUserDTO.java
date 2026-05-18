@@ -4,7 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.vn.security.core.config.Constants;
 import com.vn.security.core.domain.Authority;
 import com.vn.security.core.domain.User;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
@@ -13,6 +15,8 @@ import java.util.stream.Collectors;
 
 /**
  * A DTO representing a user, with his authorities.
+ *
+ * <p>Email field đã bỏ cùng với toàn bộ email feature (bug #001).</p>
  */
 public class AdminUserDTO implements Serializable {
 
@@ -32,14 +36,10 @@ public class AdminUserDTO implements Serializable {
     @Size(max = 50)
     private String lastName;
 
-    @Email
-    @Size(min = 5, max = 254)
-    private String email;
-
     @Size(max = 256)
     private String imageUrl;
 
-    private boolean activated = false;
+    private boolean activated = true;
 
     @Size(min = 2, max = 10)
     private String langKey;
@@ -71,7 +71,6 @@ public class AdminUserDTO implements Serializable {
         this.login = user.getLogin();
         this.firstName = user.getFirstName();
         this.lastName = user.getLastName();
-        this.email = user.getEmail();
         this.activated = user.isActivated();
         this.imageUrl = user.getImageUrl();
         this.langKey = user.getLangKey();
@@ -112,14 +111,6 @@ public class AdminUserDTO implements Serializable {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
     }
 
     public String getImageUrl() {
@@ -201,7 +192,6 @@ public class AdminUserDTO implements Serializable {
             "login='" + login + '\'' +
             ", firstName='" + firstName + '\'' +
             ", lastName='" + lastName + '\'' +
-            ", email='" + email + '\'' +
             ", imageUrl='" + imageUrl + '\'' +
             ", activated=" + activated +
             ", langKey='" + langKey + '\'' +

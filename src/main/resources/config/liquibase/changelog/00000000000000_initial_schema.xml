@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Email column và email-confirm flow đã bỏ khỏi starter (bug #001). user.csv không còn
+    chứa column email; bảng sec_user do JPA tự tạo (ddl-auto), không có column email nữa.
+-->
 <databaseChangeLog
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -23,7 +27,6 @@
             <column name="password_hash"   type="STRING"/>
             <column name="first_name"      type="STRING"/>
             <column name="last_name"       type="STRING"/>
-            <column name="email"           type="STRING"/>
             <column name="image_url"       type="STRING"/>
             <column name="activated"       type="BOOLEAN"/>
             <column name="lang_key"        type="STRING"/>
