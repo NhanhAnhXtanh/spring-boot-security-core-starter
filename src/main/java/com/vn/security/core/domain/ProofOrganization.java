@@ -13,14 +13,18 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 /**
- * Organization entity used to exercise secured CRUD and row-level rules.
+ * Proof / demo organization entity used to exercise secured CRUD and row-level rules.
+ *
+ * <p>Renamed from {@code Organization} to {@code ProofOrganization} so consumer
+ * applications can keep their own {@code Organization} domain class without bean
+ * or URL collisions.</p>
  */
-@SecuredEntity
+@SecuredEntity(code = "proof-organization")
 @Entity
 @Table(name = "proof_organization")
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 @SuppressWarnings("common-java:DuplicatedBlocks")
-public class Organization implements Serializable {
+public class ProofOrganization implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -51,7 +55,7 @@ public class Organization implements Serializable {
 
     @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL, orphanRemoval = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
-    private Set<Department> departments = new HashSet<>();
+    private Set<ProofDepartment> departments = new HashSet<>();
 
     public Long getId() {
         return id;
@@ -93,11 +97,11 @@ public class Organization implements Serializable {
         this.budget = budget;
     }
 
-    public Set<Department> getDepartments() {
+    public Set<ProofDepartment> getDepartments() {
         return departments;
     }
 
-    public void setDepartments(Set<Department> departments) {
+    public void setDepartments(Set<ProofDepartment> departments) {
         this.departments = departments;
     }
 
@@ -106,10 +110,10 @@ public class Organization implements Serializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof Organization)) {
+        if (!(o instanceof ProofOrganization)) {
             return false;
         }
-        return id != null && id.equals(((Organization) o).id);
+        return id != null && id.equals(((ProofOrganization) o).id);
     }
 
     @Override

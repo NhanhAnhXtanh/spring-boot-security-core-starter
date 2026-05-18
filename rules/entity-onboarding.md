@@ -44,7 +44,7 @@ public class Invoice implements Serializable {
     private String number;
 
     // getters/setters
-    // equals dựa trên id, hashCode dựa trên class — copy mẫu từ Department.java
+    // equals dựa trên id, hashCode dựa trên class — copy mẫu từ ProofDepartment.java
 }
 ```
 
@@ -135,7 +135,7 @@ Nếu muốn fetch plan khác tên → đổi `fetchPlanCodes` trong annotation 
 
 ### Bước 6 — Service + REST resource
 
-Service: copy nguyên pattern từ `DepartmentService` (xem [`data-access.md`](data-access.md) §1). Không tạo `InvoiceRepository extends JpaRepository`. Chỉ inject `SecureDataManager` (+ `EntityManager` nếu cần resolve reference).
+Service: copy nguyên pattern từ `ProofDepartmentService` (xem [`data-access.md`](data-access.md) §1). Không tạo `InvoiceRepository extends JpaRepository`. Chỉ inject `SecureDataManager` (+ `EntityManager` nếu cần resolve reference).
 
 ```java
 @Service
@@ -171,7 +171,7 @@ public class InvoiceService {
 }
 ```
 
-REST resource: copy theo `DepartmentResource`.
+REST resource: copy theo `ProofDepartmentResource`.
 
 ### Smoke test 1 phút sau khi xong 6 bước
 
@@ -237,10 +237,10 @@ Nếu 403 mọi nơi → check Bước 4 (seed permission). Nếu "entity not re
 
 ## D. Tham chiếu code mẫu
 
-- Entity gốc: `com.vn.security.core.domain.Department` / `Employee` / `Organization` (không extend AbstractAuditing) — pattern phổ biến.
+- Entity gốc (demo proof entities — kèm prefix `Proof` để consumer không bị đụng tên): `com.vn.security.core.domain.ProofDepartment` / `ProofEmployee` / `ProofOrganization` (không extend AbstractAuditing) — pattern phổ biến.
 - Entity có audit: `com.vn.security.core.domain.User` (extend `AbstractAuditingEntity<Long>`).
-- Service: `com.vn.security.core.service.DepartmentService`.
-- REST: `com.vn.security.core.web.rest.DepartmentResource`.
+- Service: `com.vn.security.core.service.ProofDepartmentService`.
+- REST: `com.vn.security.core.web.rest.ProofDepartmentResource`.
 - Catalog scanner: `com.vn.security.core.security.catalog.MetamodelSecuredEntityCatalog`.
 - Seed permission mẫu: `src/main/resources/db/seed/seed-permissions.sql`.
 - Fetch plan mẫu: `src/main/resources/fetch-plans.yml`.

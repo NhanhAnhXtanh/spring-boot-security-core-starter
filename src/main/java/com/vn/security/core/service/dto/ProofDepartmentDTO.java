@@ -6,9 +6,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A DTO for the {@link com.vn.core.domain.Department} entity.
+ * A DTO for the {@link com.vn.security.core.domain.ProofDepartment} entity.
  */
-public class DepartmentDTO implements Serializable {
+public class ProofDepartmentDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -21,9 +21,9 @@ public class DepartmentDTO implements Serializable {
 
     private String costCenter;
 
-    private Set<EmployeeDTO> employees = new HashSet<>();
+    private Set<ProofEmployeeDTO> employees = new HashSet<>();
 
-    public DepartmentDTO() {
+    public ProofDepartmentDTO() {
         // Empty constructor needed for Jackson.
     }
 
@@ -59,18 +59,18 @@ public class DepartmentDTO implements Serializable {
         this.costCenter = costCenter;
     }
 
-    public Set<EmployeeDTO> getEmployees() {
+    public Set<ProofEmployeeDTO> getEmployees() {
         return employees;
     }
 
-    public void setEmployees(Set<EmployeeDTO> employees) {
+    public void setEmployees(Set<ProofEmployeeDTO> employees) {
         this.employees = employees;
     }
 
     // prettier-ignore
     @Override
     public String toString() {
-        return "DepartmentDTO{" +
+        return "ProofDepartmentDTO{" +
             "id=" + id +
             ", code='" + code + '\'' +
             ", name='" + name + '\'' +

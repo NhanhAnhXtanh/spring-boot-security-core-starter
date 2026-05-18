@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
  * <p>A single {@link BeanWrapperImpl} is instantiated once per entity call and reused
  * for all scalar and association reads, avoiding per-property descriptor overhead.
  * Jackson {@code convertValue} is intentionally not used here because bidirectional
- * JPA associations (e.g. Organization↔Department) cause infinite recursion on full-entity
+ * JPA associations (e.g. ProofOrganization↔ProofDepartment) cause infinite recursion on full-entity
  * conversion; BeanWrapper reads only the properties requested by the FetchPlan.
  */
 @Component

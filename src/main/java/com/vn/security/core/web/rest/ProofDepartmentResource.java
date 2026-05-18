@@ -1,10 +1,11 @@
 package com.vn.security.core.web.rest;
 
-import com.vn.security.core.domain.Department;
+import com.vn.security.core.domain.ProofDepartment;
 import com.vn.security.core.security.data.SecureDataManager.EntityMutation;
 import com.vn.security.core.security.web.SecuredEntityJsonAdapter;
 import com.vn.security.core.security.web.SecuredEntityPayloadValidator;
-import com.vn.security.core.service.DepartmentService;
+import com.vn.security.core.service.ProofDepartmentService;
+import com.vn.security.core.util.PaginationUtil;
 import com.vn.security.core.web.rest.vm.SecuredEntityQueryVM;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -39,69 +40,62 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import com.vn.security.core.util.PaginationUtil;
 
 /**
- * REST controller exposing secured CRUD endpoints for departments.
+ * REST controller exposing secured CRUD endpoints for proof / demo departments.
+ *
+ * <p>Path is namespaced under {@code /api/proof/} to avoid colliding with any
+ * {@code /api/departments} endpoint the consumer application may expose.</p>
  */
 @Tag(
-    name = "Departments",
-    description = "Secured CRUD for Department entities. Responses are attribute-filtered by the caller's VIEW " +
+    name = "ProofDepartments",
+    description = "Secured CRUD for ProofDepartment (demo) entities. Responses are attribute-filtered by the caller's VIEW " +
     "permission via SecureEntitySerializerImpl."
 )
 @RestController
-@RequestMapping("/api/departments")
+@RequestMapping("/api/proof/departments")
 @PreAuthorize("isAuthenticated()")
-public class DepartmentResource {
+public class ProofDepartmentResource {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DepartmentResource.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ProofDepartmentResource.class);
     private static final int DEFAULT_PAGE = 0;
     private static final int DEFAULT_SIZE = 20;
-    private static final String LIST_FETCH_PLAN = "department-list";
-    private static final String DETAIL_FETCH_PLAN = "department-detail";
+    private static final String LIST_FETCH_PLAN = "proof-department-list";
+    private static final String DETAIL_FETCH_PLAN = "proof-department-detail";
 
-    private final DepartmentService departmentService;
+    private final ProofDepartmentService proofDepartmentService;
     private final SecuredEntityJsonAdapter securedEntityJsonAdapter;
     private final SecuredEntityPayloadValidator securedEntityPayloadValidator;
 
-    public DepartmentResource(
-        DepartmentService departmentService,
+    public ProofDepartmentResource(
+        ProofDepartmentService proofDepartmentService,
         SecuredEntityJsonAdapter securedEntityJsonAdapter,
         SecuredEntityPayloadValidator securedEntityPayloadValidator
     ) {
-        this.departmentService = departmentService;
+        this.proofDepartmentService = proofDepartmentService;
         this.securedEntityJsonAdapter = securedEntityJsonAdapter;
         this.securedEntityPayloadValidator = securedEntityPayloadValidator;
     }
 
     @Operation(
-        operationId = "getAllDepartments",
-        summary = "List departments (paginated)",
-        description = "Returns a paginated list of departments through the @SecuredEntity pipeline. Uses fetch-plan " +
-        "'department-list': fields id, code, name, costCenter; nested organization[id, name]. Fields may be " +
-        "omitted if the caller lacks VIEW permission."
+        operationId = "getAllProofDepartments",
+        summary = "List proof departments (paginated)",
+        description = "Returns a paginated list of proof departments through the @SecuredEntity pipeline."
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
             description = "OK",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(
-                    type = "array",
-                    description = "JSON array of department objects (fetch-plan: department-list). Fields may be " +
-                    "omitted based on caller VIEW permissions."
-                )
-            )
+            content = @Content(mediaType = "application/json", schema = @Schema(type = "array"))
         ),
         @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content),
         @ApiResponse(responseCode = "403", description = "Forbidden — missing entity READ permission", content = @Content),
     })
     @GetMapping("")
     @Transactional(readOnly = true)
-    public ResponseEntity<String> getAllDepartments(@ParameterObject Pageable pageable) {
-        LOG.debug("REST request to get departments");
-        Page<Department> page = departmentService.list(pageable);
+    public ResponseEntity<String> getAllProofDepartments(@ParameterObject Pageable pageable) {
+        LOG.debug("REST request to get proof departments");
+        Page<ProofDepartment> page = proofDepartmentService.list(pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return ResponseEntity.ok()
             .headers(headers)
@@ -110,35 +104,27 @@ public class DepartmentResource {
     }
 
     @Operation(
-        operationId = "getDepartment",
-        summary = "Get department by ID",
-        description = "Returns a single department through the @SecuredEntity pipeline. Uses fetch-plan " +
-        "'department-detail': fields id, code, name, costCenter; nested organization[id, code, name, ownerLogin] " +
-        "and employees[id, employeeNumber, firstName, lastName, email, salary]. Fields may be omitted if the " +
-        "caller lacks VIEW permission."
+        operationId = "getProofDepartment",
+        summary = "Get proof department by ID",
+        description = "Returns a single proof department through the @SecuredEntity pipeline."
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
             description = "OK",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(
-                    type = "object",
-                    description = "JSON object with fields from fetch-plan: department-detail. Fields may be omitted " +
-                    "based on caller VIEW permissions."
-                )
-            )
+            content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))
         ),
         @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content),
         @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content),
-        @ApiResponse(responseCode = "404", description = "Department not found", content = @Content),
+        @ApiResponse(responseCode = "404", description = "ProofDepartment not found", content = @Content),
     })
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
-    public ResponseEntity<String> getDepartment(@Parameter(description = "Department ID", required = true) @PathVariable("id") Long id) {
-        LOG.debug("REST request to get department : {}", id);
-        return departmentService
+    public ResponseEntity<String> getProofDepartment(
+        @Parameter(description = "ProofDepartment ID", required = true) @PathVariable("id") Long id
+    ) {
+        LOG.debug("REST request to get proof department : {}", id);
+        return proofDepartmentService
             .findOne(id)
             .map(department ->
                 ResponseEntity.ok()
@@ -149,20 +135,15 @@ public class DepartmentResource {
     }
 
     @Operation(
-        operationId = "createDepartment",
-        summary = "Create a new department",
-        description = "Creates a department through the @SecuredEntity pipeline. Request body is a JSON object with " +
-        "writable Department attributes. Attribute-level CREATE permission is enforced on each field. Returns the " +
-        "created entity serialized via fetch-plan 'department-detail'."
+        operationId = "createProofDepartment",
+        summary = "Create a new proof department",
+        description = "Creates a proof department through the @SecuredEntity pipeline."
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "201",
             description = "Created",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(type = "object", description = "Created department (fetch-plan: department-detail).")
-            )
+            content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))
         ),
         @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content),
         @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content),
@@ -170,9 +151,9 @@ public class DepartmentResource {
     })
     @PostMapping("")
     @Transactional
-    public ResponseEntity<String> createDepartment(
+    public ResponseEntity<String> createProofDepartment(
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "Department attributes as JSON object",
+            description = "ProofDepartment attributes as JSON object",
             required = true,
             content = @Content(
                 mediaType = "application/json",
@@ -180,105 +161,90 @@ public class DepartmentResource {
             )
         ) @RequestBody String attributesJson
     ) {
-        LOG.debug("REST request to create department");
-        EntityMutation<Department> mutation = securedEntityJsonAdapter.fromJson(attributesJson, Department.class);
-        Department result = departmentService.create(mutation);
-        return ResponseEntity.created(URI.create("/api/departments/" + result.getId()))
+        LOG.debug("REST request to create proof department");
+        EntityMutation<ProofDepartment> mutation = securedEntityJsonAdapter.fromJson(attributesJson, ProofDepartment.class);
+        ProofDepartment result = proofDepartmentService.create(mutation);
+        return ResponseEntity.created(URI.create("/api/proof/departments/" + result.getId()))
             .contentType(MediaType.APPLICATION_JSON)
             .body(securedEntityJsonAdapter.toJsonString(result, DETAIL_FETCH_PLAN));
     }
 
     @Operation(
-        operationId = "updateDepartment",
-        summary = "Update an existing department",
-        description = "Full update of a department through the @SecuredEntity pipeline. Attribute-level EDIT " +
-        "permission is enforced on each provided field. Returns the updated entity serialized via fetch-plan " +
-        "'department-detail'."
+        operationId = "updateProofDepartment",
+        summary = "Update an existing proof department",
+        description = "Full update of a proof department through the @SecuredEntity pipeline."
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
             description = "Updated",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(type = "object", description = "Updated department (fetch-plan: department-detail).")
-            )
+            content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))
         ),
         @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content),
         @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content),
         @ApiResponse(responseCode = "403", description = "Forbidden — missing entity UPDATE permission", content = @Content),
-        @ApiResponse(responseCode = "404", description = "Department not found", content = @Content),
+        @ApiResponse(responseCode = "404", description = "ProofDepartment not found", content = @Content),
     })
     @PutMapping("/{id}")
     @Transactional
-    public ResponseEntity<String> updateDepartment(
-        @Parameter(description = "Department ID", required = true) @PathVariable("id") Long id,
+    public ResponseEntity<String> updateProofDepartment(
+        @Parameter(description = "ProofDepartment ID", required = true) @PathVariable("id") Long id,
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "Department attributes as JSON object",
+            description = "ProofDepartment attributes as JSON object",
             required = true,
             content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))
         ) @RequestBody String attributesJson
     ) {
-        LOG.debug("REST request to update department : {}", id);
-        EntityMutation<Department> mutation = securedEntityJsonAdapter.fromJson(attributesJson, Department.class);
+        LOG.debug("REST request to update proof department : {}", id);
+        EntityMutation<ProofDepartment> mutation = securedEntityJsonAdapter.fromJson(attributesJson, ProofDepartment.class);
         return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(securedEntityJsonAdapter.toJsonString(departmentService.update(id, mutation), DETAIL_FETCH_PLAN));
+            .body(securedEntityJsonAdapter.toJsonString(proofDepartmentService.update(id, mutation), DETAIL_FETCH_PLAN));
     }
 
     @Operation(
-        operationId = "patchDepartment",
-        summary = "Partial update a department",
-        description = "PATCH partial update through the @SecuredEntity pipeline. Only provided fields are updated; " +
-        "omitted fields are preserved. Attribute-level EDIT permission is enforced on each patched field. Returns " +
-        "the updated entity serialized via fetch-plan 'department-detail'."
+        operationId = "patchProofDepartment",
+        summary = "Partial update a proof department",
+        description = "PATCH partial update through the @SecuredEntity pipeline."
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
             description = "Updated",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(type = "object", description = "Patched department (fetch-plan: department-detail).")
-            )
+            content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))
         ),
         @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content),
         @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content),
         @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content),
-        @ApiResponse(responseCode = "404", description = "Department not found", content = @Content),
+        @ApiResponse(responseCode = "404", description = "ProofDepartment not found", content = @Content),
     })
     @PatchMapping(value = "/{id}", consumes = { "application/json", "application/merge-patch+json" })
     @Transactional
-    public ResponseEntity<String> patchDepartment(
-        @Parameter(description = "Department ID", required = true) @PathVariable("id") Long id,
+    public ResponseEntity<String> patchProofDepartment(
+        @Parameter(description = "ProofDepartment ID", required = true) @PathVariable("id") Long id,
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            description = "Department attributes as JSON object",
+            description = "ProofDepartment attributes as JSON object",
             required = true,
             content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))
         ) @RequestBody String attributesJson
     ) {
-        LOG.debug("REST request to patch department : {}", id);
-        EntityMutation<Department> mutation = securedEntityJsonAdapter.fromJson(attributesJson, Department.class);
+        LOG.debug("REST request to patch proof department : {}", id);
+        EntityMutation<ProofDepartment> mutation = securedEntityJsonAdapter.fromJson(attributesJson, ProofDepartment.class);
         return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(securedEntityJsonAdapter.toJsonString(departmentService.patch(id, mutation), DETAIL_FETCH_PLAN));
+            .body(securedEntityJsonAdapter.toJsonString(proofDepartmentService.patch(id, mutation), DETAIL_FETCH_PLAN));
     }
 
     @Operation(
-        operationId = "queryDepartments",
-        summary = "Query departments with filters",
-        description = "Paginated query with optional filters through the @SecuredEntity pipeline. Default fetch-plan: " +
-        "'department-list'. Accepts an optional fetchPlanCode in the request body to select a different plan. " +
-        "Fields may be omitted if the caller lacks VIEW permission."
+        operationId = "queryProofDepartments",
+        summary = "Query proof departments with filters",
+        description = "Paginated query with optional filters through the @SecuredEntity pipeline."
     )
     @ApiResponses({
         @ApiResponse(
             responseCode = "200",
             description = "OK",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(type = "array", description = "JSON array of department objects filtered by query criteria.")
-            )
+            content = @Content(mediaType = "application/json", schema = @Schema(type = "array"))
         ),
         @ApiResponse(responseCode = "400", description = "Invalid query", content = @Content),
         @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content),
@@ -286,17 +252,17 @@ public class DepartmentResource {
     })
     @PostMapping("/query")
     @Transactional(readOnly = true)
-    public ResponseEntity<String> queryDepartments(
+    public ResponseEntity<String> queryProofDepartments(
         @io.swagger.v3.oas.annotations.parameters.RequestBody(
             description = "Query payload with optional filters, pagination, sort, and fetchPlanCode",
             required = true,
             content = @Content(mediaType = "application/json", schema = @Schema(type = "object"))
         ) @Valid @RequestBody SecuredEntityQueryVM request
     ) {
-        LOG.debug("REST request to query departments");
+        LOG.debug("REST request to query proof departments");
         String fetchPlanCode = resolveFetchPlanCode(request.fetchPlanCode(), LIST_FETCH_PLAN);
-        securedEntityPayloadValidator.validateQuery(request, Department.class, fetchPlanCode);
-        Page<Department> page = departmentService.query(fetchPlanCode, buildPageable(request), request.filters());
+        securedEntityPayloadValidator.validateQuery(request, ProofDepartment.class, fetchPlanCode);
+        Page<ProofDepartment> page = proofDepartmentService.query(fetchPlanCode, buildPageable(request), request.filters());
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return ResponseEntity.ok()
             .headers(headers)
@@ -305,9 +271,9 @@ public class DepartmentResource {
     }
 
     @Operation(
-        operationId = "deleteDepartment",
-        summary = "Delete a department",
-        description = "Deletes a department through the @SecuredEntity pipeline. Entity-level DELETE permission is enforced."
+        operationId = "deleteProofDepartment",
+        summary = "Delete a proof department",
+        description = "Deletes a proof department through the @SecuredEntity pipeline."
     )
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Deleted"),
@@ -316,9 +282,11 @@ public class DepartmentResource {
     })
     @DeleteMapping("/{id}")
     @Transactional
-    public ResponseEntity<Void> deleteDepartment(@Parameter(description = "Department ID", required = true) @PathVariable("id") Long id) {
-        LOG.debug("REST request to delete department : {}", id);
-        departmentService.delete(id);
+    public ResponseEntity<Void> deleteProofDepartment(
+        @Parameter(description = "ProofDepartment ID", required = true) @PathVariable("id") Long id
+    ) {
+        LOG.debug("REST request to delete proof department : {}", id);
+        proofDepartmentService.delete(id);
         return ResponseEntity.noContent().build();
     }
 

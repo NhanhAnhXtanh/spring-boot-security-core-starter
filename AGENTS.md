@@ -38,4 +38,4 @@ Khi một dự án khác (consumer) implement starter này, **mọi data access 
 
 - Đọc `README.md` để biết cách cài starter và config tối thiểu.
 - Đọc `rules/data-access.md` trước khi viết service / controller mới.
-- Tham khảo `src/main/java/com/vn/security/core/service/DepartmentService.java` cho pattern chuẩn.
+- Tham khảo `src/main/java/com/vn/security/core/service/ProofDepartmentService.java` cho pattern chuẩn.

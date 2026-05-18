@@ -4,9 +4,9 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * A DTO for the {@link com.vn.core.domain.Organization} entity (list view).
+ * A DTO for the {@link com.vn.security.core.domain.ProofOrganization} entity (list view).
  */
-public class OrganizationDTO implements Serializable {
+public class ProofOrganizationDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -19,7 +19,7 @@ public class OrganizationDTO implements Serializable {
 
     private String ownerLogin;
 
-    public OrganizationDTO() {
+    public ProofOrganizationDTO() {
         // Empty constructor needed for Jackson.
     }
 
@@ -58,7 +58,7 @@ public class OrganizationDTO implements Serializable {
     // prettier-ignore
     @Override
     public String toString() {
-        return "OrganizationDTO{" +
+        return "ProofOrganizationDTO{" +
             "id=" + id +
             ", code='" + code + '\'' +
             ", name='" + name + '\'' +

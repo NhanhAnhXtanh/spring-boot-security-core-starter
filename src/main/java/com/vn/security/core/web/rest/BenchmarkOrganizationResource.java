@@ -1,8 +1,10 @@
 package com.vn.security.core.web.rest;
 
 import com.vn.security.core.service.BenchmarkOrganizationStandardService;
-import com.vn.security.core.service.dto.OrganizationDTO;
-import com.vn.security.core.service.dto.OrganizationDetailDTO;
+import com.vn.security.core.service.dto.ProofOrganizationDTO;
+import com.vn.security.core.service.dto.ProofOrganizationDetailDTO;
+import com.vn.security.core.util.PaginationUtil;
+import com.vn.security.core.util.ResponseUtil;
 import io.swagger.v3.oas.annotations.Hidden;
 import java.util.List;
 import java.util.Optional;
@@ -21,16 +23,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import com.vn.security.core.util.PaginationUtil;
-import com.vn.security.core.util.ResponseUtil;
 
 /**
- * Benchmark-only baseline endpoint for organization reads.
+ * Benchmark-only baseline endpoint for proof-organization reads (standard JPA flow,
+ * not secured). Hidden from public OpenAPI, only active under the {@code api-docs} profile.
  */
 @RestController
 @Profile("api-docs")
 @Hidden
-@RequestMapping("/api/benchmark/organizations-standard")
+@RequestMapping("/api/benchmark/proof-organizations-standard")
 @PreAuthorize("isAuthenticated()")
 public class BenchmarkOrganizationResource {
 
@@ -44,18 +45,18 @@ public class BenchmarkOrganizationResource {
 
     @GetMapping("")
     @Transactional(readOnly = true)
-    public ResponseEntity<List<OrganizationDTO>> getAllOrganizations(@ParameterObject Pageable pageable) {
-        LOG.debug("REST benchmark request to get organizations");
-        Page<OrganizationDTO> page = benchmarkOrganizationStandardService.list(pageable);
+    public ResponseEntity<List<ProofOrganizationDTO>> getAllProofOrganizations(@ParameterObject Pageable pageable) {
+        LOG.debug("REST benchmark request to get proof organizations");
+        Page<ProofOrganizationDTO> page = benchmarkOrganizationStandardService.list(pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
 
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
-    public ResponseEntity<OrganizationDetailDTO> getOrganization(@PathVariable("id") Long id) {
-        LOG.debug("REST benchmark request to get organization : {}", id);
-        Optional<OrganizationDetailDTO> organizationDetailDTO = benchmarkOrganizationStandardService.findOne(id);
-        return ResponseUtil.wrapOrNotFound(organizationDetailDTO);
+    public ResponseEntity<ProofOrganizationDetailDTO> getProofOrganization(@PathVariable("id") Long id) {
+        LOG.debug("REST benchmark request to get proof organization : {}", id);
+        Optional<ProofOrganizationDetailDTO> dto = benchmarkOrganizationStandardService.findOne(id);
+        return ResponseUtil.wrapOrNotFound(dto);
     }
 }

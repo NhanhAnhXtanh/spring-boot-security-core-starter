@@ -1,6 +1,6 @@
 package com.vn.security.core.service;
 
-import com.vn.security.core.domain.Organization;
+import com.vn.security.core.domain.ProofOrganization;
 import com.vn.security.core.security.SecurityUtils;
 import com.vn.security.core.security.data.SecureDataManager;
 import com.vn.security.core.security.data.SecureDataManager.EntityMutation;
@@ -16,37 +16,37 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Secured Organization application service backed only by {@link SecureDataManager}.
+ * Secured ProofOrganization application service backed only by {@link SecureDataManager}.
  */
 @Service
 @Transactional
-public class OrganizationService {
+public class ProofOrganizationService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(OrganizationService.class);
-    private static final Class<Organization> ENTITY_CLASS = Organization.class;
-    private static final String ENTITY_CODE = "organization";
-    private static final String LIST_FETCH_PLAN = "organization-list";
+    private static final Logger LOG = LoggerFactory.getLogger(ProofOrganizationService.class);
+    private static final Class<ProofOrganization> ENTITY_CLASS = ProofOrganization.class;
+    private static final String ENTITY_CODE = "proof-organization";
+    private static final String LIST_FETCH_PLAN = "proof-organization-list";
 
     private final SecureDataManager secureDataManager;
 
-    public OrganizationService(SecureDataManager secureDataManager) {
+    public ProofOrganizationService(SecureDataManager secureDataManager) {
         this.secureDataManager = secureDataManager;
     }
 
     @Transactional(readOnly = true)
-    public Page<Organization> list(Pageable pageable) {
-        LOG.debug("Request to list organizations");
+    public Page<ProofOrganization> list(Pageable pageable) {
+        LOG.debug("Request to list proof organizations");
         return secureDataManager.loadList(ENTITY_CLASS, pageable);
     }
 
     @Transactional(readOnly = true)
-    public Optional<Organization> findOne(Long id) {
-        LOG.debug("Request to get organization : {}", id);
+    public Optional<ProofOrganization> findOne(Long id) {
+        LOG.debug("Request to get proof organization : {}", id);
         return secureDataManager.loadOne(ENTITY_CLASS, id);
     }
 
-    public Organization create(EntityMutation<Organization> mutation) {
-        LOG.debug("Request to create organization");
+    public ProofOrganization create(EntityMutation<ProofOrganization> mutation) {
+        LOG.debug("Request to create proof organization");
         requireEntity(mutation);
         if (mutation.entity().getOwnerLogin() == null) {
             String currentLogin = SecurityUtils.getCurrentUserLogin().orElseThrow();
@@ -58,21 +58,21 @@ public class OrganizationService {
         return secureDataManager.save(ENTITY_CLASS, null, mutation);
     }
 
-    public Organization update(Long id, EntityMutation<Organization> mutation) {
-        LOG.debug("Request to update organization : {}", id);
+    public ProofOrganization update(Long id, EntityMutation<ProofOrganization> mutation) {
+        LOG.debug("Request to update proof organization : {}", id);
         requireEntity(mutation);
         return secureDataManager.save(ENTITY_CLASS, id, mutation);
     }
 
-    public Organization patch(Long id, EntityMutation<Organization> mutation) {
-        LOG.debug("Request to patch organization : {}", id);
+    public ProofOrganization patch(Long id, EntityMutation<ProofOrganization> mutation) {
+        LOG.debug("Request to patch proof organization : {}", id);
         requireEntity(mutation);
         return secureDataManager.save(ENTITY_CLASS, id, mutation);
     }
 
     @Transactional(readOnly = true)
-    public Page<Organization> query(String fetchPlanCode, Pageable pageable, Map<String, Object> filters) {
-        LOG.debug("Request to query organizations");
+    public Page<ProofOrganization> query(String fetchPlanCode, Pageable pageable, Map<String, Object> filters) {
+        LOG.debug("Request to query proof organizations");
         SecuredLoadQuery query = new SecuredLoadQuery(
             ENTITY_CODE,
             null,
@@ -85,13 +85,13 @@ public class OrganizationService {
     }
 
     public void delete(Long id) {
-        LOG.debug("Request to delete organization : {}", id);
+        LOG.debug("Request to delete proof organization : {}", id);
         secureDataManager.delete(ENTITY_CLASS, id);
     }
 
-    private void requireEntity(EntityMutation<Organization> mutation) {
+    private void requireEntity(EntityMutation<ProofOrganization> mutation) {
         if (mutation == null || mutation.entity() == null) {
-            throw new IllegalArgumentException("Typed organization mutation is required");
+            throw new IllegalArgumentException("Typed proof organization mutation is required");
         }
     }
 }

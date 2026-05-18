@@ -12,14 +12,18 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 /**
- * Department entity linked to an organization and its employees.
+ * Proof / demo department entity linked to a {@link ProofOrganization} and its employees.
+ *
+ * <p>Renamed from {@code Department} to {@code ProofDepartment} so consumer
+ * applications can keep their own {@code Department} domain class without bean
+ * or URL collisions.</p>
  */
-@SecuredEntity(jpqlAllowed = true)
+@SecuredEntity(code = "proof-department", jpqlAllowed = true)
 @Entity
 @Table(name = "proof_department")
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 @SuppressWarnings("common-java:DuplicatedBlocks")
-public class Department implements Serializable {
+public class ProofDepartment implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -47,11 +51,11 @@ public class Department implements Serializable {
     @NotNull
     @ManyToOne(optional = false)
     @JoinColumn(name = "organization_id", nullable = false)
-    private Organization organization;
+    private ProofOrganization organization;
 
     @OneToMany(mappedBy = "department", cascade = CascadeType.ALL, orphanRemoval = true)
     @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
-    private Set<Employee> employees = new HashSet<>();
+    private Set<ProofEmployee> employees = new HashSet<>();
 
     public Long getId() {
         return id;
@@ -85,19 +89,19 @@ public class Department implements Serializable {
         this.costCenter = costCenter;
     }
 
-    public Organization getOrganization() {
+    public ProofOrganization getOrganization() {
         return organization;
     }
 
-    public void setOrganization(Organization organization) {
+    public void setOrganization(ProofOrganization organization) {
         this.organization = organization;
     }
 
-    public Set<Employee> getEmployees() {
+    public Set<ProofEmployee> getEmployees() {
         return employees;
     }
 
-    public void setEmployees(Set<Employee> employees) {
+    public void setEmployees(Set<ProofEmployee> employees) {
         this.employees = employees;
     }
 
@@ -106,10 +110,10 @@ public class Department implements Serializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof Department)) {
+        if (!(o instanceof ProofDepartment)) {
             return false;
         }
-        return id != null && id.equals(((Department) o).id);
+        return id != null && id.equals(((ProofDepartment) o).id);
     }
 
     @Override

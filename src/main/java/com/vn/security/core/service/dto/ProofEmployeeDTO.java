@@ -5,9 +5,9 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
- * A DTO for the {@link com.vn.core.domain.Employee} entity.
+ * A DTO for the {@link com.vn.security.core.domain.ProofEmployee} entity.
  */
-public class EmployeeDTO implements Serializable {
+public class ProofEmployeeDTO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -24,7 +24,7 @@ public class EmployeeDTO implements Serializable {
 
     private BigDecimal salary;
 
-    public EmployeeDTO() {
+    public ProofEmployeeDTO() {
         // Empty constructor needed for Jackson.
     }
 
@@ -79,7 +79,7 @@ public class EmployeeDTO implements Serializable {
     // prettier-ignore
     @Override
     public String toString() {
-        return "EmployeeDTO{" +
+        return "ProofEmployeeDTO{" +
             "id=" + id +
             ", employeeNumber='" + employeeNumber + '\'' +
             ", firstName='" + firstName + '\'' +

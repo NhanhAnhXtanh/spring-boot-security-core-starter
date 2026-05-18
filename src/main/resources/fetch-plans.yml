@@ -1,15 +1,15 @@
 fetch-plans:
-  - entity: com.vn.security.core.domain.Organization
-    name: organization-list
+  - entity: com.vn.security.core.domain.ProofOrganization
+    name: proof-organization-list
     properties:
       - id
       - code
       - name
       - ownerLogin
 
-  - entity: com.vn.security.core.domain.Organization
-    name: organization-detail
-    extends: organization-list
+  - entity: com.vn.security.core.domain.ProofOrganization
+    name: proof-organization-detail
+    extends: proof-organization-list
     properties:
       - budget
       - name: departments
@@ -27,8 +27,8 @@ fetch-plans:
               - email
               - salary
 
-  - entity: com.vn.security.core.domain.Department
-    name: department-list
+  - entity: com.vn.security.core.domain.ProofDepartment
+    name: proof-department-list
     properties:
       - id
       - code
@@ -39,9 +39,9 @@ fetch-plans:
           - name
       - costCenter
 
-  - entity: com.vn.security.core.domain.Department
-    name: department-detail
-    extends: department-list
+  - entity: com.vn.security.core.domain.ProofDepartment
+    name: proof-department-detail
+    extends: proof-department-list
     properties:
       - name: organization
         properties:
@@ -58,8 +58,8 @@ fetch-plans:
           - email
           - salary
 
-  - entity: com.vn.security.core.domain.Employee
-    name: employee-list
+  - entity: com.vn.security.core.domain.ProofEmployee
+    name: proof-employee-list
     properties:
       - id
       - employeeNumber
@@ -71,9 +71,9 @@ fetch-plans:
           - name
       - email
 
-  - entity: com.vn.security.core.domain.Employee
-    name: employee-detail
-    extends: employee-list
+  - entity: com.vn.security.core.domain.ProofEmployee
+    name: proof-employee-detail
+    extends: proof-employee-list
     properties:
       - salary
       - name: department

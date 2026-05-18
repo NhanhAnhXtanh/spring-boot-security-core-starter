@@ -19,7 +19,7 @@ Khi viết code đụng đến database trong dự án consumer:
 
 - **`JpaRepository` → KHÔNG dùng cho entity nghiệp vụ.** Trong starter chỉ có `UserRepository` và `AuthorityRepository` (entity hạ tầng auth/RBAC) là JpaRepository — đây là quy ước cố định, consumer **không tạo thêm** `JpaRepository` nào khác.
 - **`EntityManager` → là kênh chính** cho mọi entity còn lại. Nhưng KHÔNG gọi `entityManager.find/persist/merge/remove` thẳng từ service/controller cho entity nghiệp vụ — đi qua `SecureDataManager` (hoặc `UnconstrainedDataManager` khi thoả điều kiện ở §2).
-- `EntityManager` chỉ được phép gọi trực tiếp để **resolve managed reference** sau khi đã verify quyền qua `SecureDataManager.loadOne(...)` — xem mẫu `DepartmentService#adaptOrganizationReference`.
+- `EntityManager` chỉ được phép gọi trực tiếp để **resolve managed reference** sau khi đã verify quyền qua `SecureDataManager.loadOne(...)` — xem mẫu `ProofDepartmentService#adaptOrganizationReference`.
 
 ---
 
@@ -33,7 +33,7 @@ Interface: `com.vn.security.core.security.data.SecureDataManager`
 - Mọi service nghiệp vụ load/save/delete entity được liệt kê trong `SecuredEntityCatalog`.
 - Khi cần áp dụng đầy đủ: **CRUD permission** + **row-level filter** + **attribute-level check** + **fetch plan** + **audit log**.
 
-### Cách dùng (pattern chuẩn — copy theo `DepartmentService`)
+### Cách dùng (pattern chuẩn — copy theo `ProofDepartmentService`)
 
 ```java
 @Service
@@ -77,7 +77,7 @@ public class FooService {
 ### Bắt buộc nhớ
 
 - Save **luôn** đi qua `EntityMutation<E>(entity, changedAttributes)` — `changedAttributes` quyết định attribute-level check sẽ áp dụng lên cột nào.
-- Khi adapt reference (`entity.organization = ...`) cần load reference **qua `secureDataManager.loadOne(...)`** trước để xác nhận user có quyền nhìn thấy reference đó. Sau đó mới `entityManager.find(...)` để lấy managed instance gắn vào entity hiện tại. Xem mẫu `DepartmentService#adaptOrganizationReference`.
+- Khi adapt reference (`entity.organization = ...`) cần load reference **qua `secureDataManager.loadOne(...)`** trước để xác nhận user có quyền nhìn thấy reference đó. Sau đó mới `entityManager.find(...)` để lấy managed instance gắn vào entity hiện tại. Xem mẫu `ProofDepartmentService#adaptOrganizationReference`.
 
 ---
 
@@ -186,7 +186,7 @@ Chọn khi consumer **chưa có** BaseEntity và muốn dùng luôn audit fields
 
 **Lựa chọn C — Không extend gì cả:**
 
-Entity `implements Serializable` thuần, không cần audit. Pattern này dùng phổ biến trong starter (`Organization`, `Department`, `Employee`).
+Entity `implements Serializable` thuần, không cần audit. Pattern này dùng phổ biến trong starter (`ProofOrganization`, `ProofDepartment`, `ProofEmployee`).
 
 > **Tóm lại:** Cả 3 lựa chọn đều hợp lệ. Yêu cầu duy nhất là entity phải có annotation `@SecuredEntity`. Starter **không can thiệp** vào việc consumer chọn superclass nào.
 
@@ -247,4 +247,4 @@ Bạn cần đọc/ghi database?
 - `com.vn.security.core.security.data.SecureDataManager`
 - `com.vn.security.core.security.data.UnconstrainedDataManager`
 - `com.vn.security.core.domain.AbstractAuditingEntity`
-- Ví dụ sử dụng: `com.vn.security.core.service.DepartmentService`, `EmployeeService`, `OrganizationService`
+- Ví dụ sử dụng: `com.vn.security.core.service.ProofDepartmentService`, `ProofEmployeeService`, `ProofOrganizationService`

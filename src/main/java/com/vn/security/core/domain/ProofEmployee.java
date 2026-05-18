@@ -11,14 +11,17 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 /**
- * Employee entity with a sensitive salary field for attribute checks.
+ * Proof / demo employee entity with a sensitive {@code salary} field for attribute checks.
+ *
+ * <p>Renamed from {@code Employee} to {@code ProofEmployee} so consumer applications
+ * can keep their own {@code Employee} domain class without bean or URL collisions.</p>
  */
-@SecuredEntity
+@SecuredEntity(code = "proof-employee")
 @Entity
 @Table(name = "proof_employee")
 @Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 @SuppressWarnings("common-java:DuplicatedBlocks")
-public class Employee implements Serializable {
+public class ProofEmployee implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -54,7 +57,7 @@ public class Employee implements Serializable {
     @NotNull
     @ManyToOne(optional = false)
     @JoinColumn(name = "department_id", nullable = false)
-    private Department department;
+    private ProofDepartment department;
 
     public Long getId() {
         return id;
@@ -104,11 +107,11 @@ public class Employee implements Serializable {
         this.salary = salary;
     }
 
-    public Department getDepartment() {
+    public ProofDepartment getDepartment() {
         return department;
     }
 
-    public void setDepartment(Department department) {
+    public void setDepartment(ProofDepartment department) {
         this.department = department;
     }
 
@@ -117,10 +120,10 @@ public class Employee implements Serializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof Employee)) {
+        if (!(o instanceof ProofEmployee)) {
             return false;
         }
-        return id != null && id.equals(((Employee) o).id);
+        return id != null && id.equals(((ProofEmployee) o).id);
     }
 
     @Override

@@ -1,8 +1,8 @@
 package com.vn.security.core.config;
 
-import com.vn.security.core.web.rest.DepartmentResource;
-import com.vn.security.core.web.rest.EmployeeResource;
-import com.vn.security.core.web.rest.OrganizationResource;
+import com.vn.security.core.web.rest.ProofDepartmentResource;
+import com.vn.security.core.web.rest.ProofEmployeeResource;
+import com.vn.security.core.web.rest.ProofOrganizationResource;
 import io.swagger.v3.oas.models.Operation;
 import java.util.Set;
 import org.springdoc.core.customizers.OperationCustomizer;
@@ -17,9 +17,9 @@ import org.springframework.web.method.HandlerMethod;
 public class SecuredEntityOperationCustomizer implements OperationCustomizer {
 
     private static final Set<Class<?>> SECURED_ENTITY_CONTROLLERS = Set.of(
-        OrganizationResource.class,
-        DepartmentResource.class,
-        EmployeeResource.class
+        ProofOrganizationResource.class,
+        ProofDepartmentResource.class,
+        ProofEmployeeResource.class
     );
 
     @Override

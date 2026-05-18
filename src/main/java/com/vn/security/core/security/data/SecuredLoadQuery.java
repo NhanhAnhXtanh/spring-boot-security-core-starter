@@ -11,11 +11,11 @@ import org.springframework.data.domain.Sort;
  * <p>Construct via {@link #builder()} for readability:
  * <pre>{@code
  * SecuredLoadQuery q = SecuredLoadQuery.builder()
- *     .entityCode("department")
- *     .jpql("select d from Department d where d.organization.id = :orgId")
+ *     .entityCode("proof-department")
+ *     .jpql("select d from ProofDepartment d where d.organization.id = :orgId")
  *     .parameter("orgId", 1L)
  *     .pageable(pageable)
- *     .fetchPlanCode("department-detail")
+ *     .fetchPlanCode("proof-department-detail")
  *     .build();
  * }</pre>
  */

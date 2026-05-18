@@ -6,18 +6,18 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A DTO for the {@link com.vn.core.domain.Organization} entity (detail view).
+ * A DTO for the {@link com.vn.security.core.domain.ProofOrganization} entity (detail view).
  */
-public class OrganizationDetailDTO extends OrganizationDTO {
+public class ProofOrganizationDetailDTO extends ProofOrganizationDTO {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     private BigDecimal budget;
 
-    private Set<DepartmentDTO> departments = new HashSet<>();
+    private Set<ProofDepartmentDTO> departments = new HashSet<>();
 
-    public OrganizationDetailDTO() {
+    public ProofOrganizationDetailDTO() {
         // Empty constructor needed for Jackson.
     }
 
@@ -29,18 +29,18 @@ public class OrganizationDetailDTO extends OrganizationDTO {
         this.budget = budget;
     }
 
-    public Set<DepartmentDTO> getDepartments() {
+    public Set<ProofDepartmentDTO> getDepartments() {
         return departments;
     }
 
-    public void setDepartments(Set<DepartmentDTO> departments) {
+    public void setDepartments(Set<ProofDepartmentDTO> departments) {
         this.departments = departments;
     }
 
     // prettier-ignore
     @Override
     public String toString() {
-        return "OrganizationDetailDTO{" +
+        return "ProofOrganizationDetailDTO{" +
             "id=" + getId() +
             ", code='" + getCode() + '\'' +
             ", name='" + getName() + '\'' +

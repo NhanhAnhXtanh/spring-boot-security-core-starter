@@ -1,7 +1,7 @@
 package com.vn.security.core.service;
 
-import com.vn.security.core.domain.Department;
-import com.vn.security.core.domain.Employee;
+import com.vn.security.core.domain.ProofDepartment;
+import com.vn.security.core.domain.ProofEmployee;
 import com.vn.security.core.security.data.SecureDataManager;
 import com.vn.security.core.security.data.SecureDataManager.EntityMutation;
 import com.vn.security.core.security.data.SecuredLoadQuery;
@@ -19,55 +19,55 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Secured Employee application service backed only by {@link SecureDataManager}.
+ * Secured ProofEmployee application service backed only by {@link SecureDataManager}.
  */
 @Service
 @Transactional
-public class EmployeeService {
+public class ProofEmployeeService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(EmployeeService.class);
-    private static final Class<Employee> ENTITY_CLASS = Employee.class;
-    private static final String ENTITY_CODE = "employee";
-    private static final String LIST_FETCH_PLAN = "employee-list";
+    private static final Logger LOG = LoggerFactory.getLogger(ProofEmployeeService.class);
+    private static final Class<ProofEmployee> ENTITY_CLASS = ProofEmployee.class;
+    private static final String ENTITY_CODE = "proof-employee";
+    private static final String LIST_FETCH_PLAN = "proof-employee-list";
 
     private final SecureDataManager secureDataManager;
     private final EntityManager entityManager;
 
-    public EmployeeService(SecureDataManager secureDataManager, EntityManager entityManager) {
+    public ProofEmployeeService(SecureDataManager secureDataManager, EntityManager entityManager) {
         this.secureDataManager = secureDataManager;
         this.entityManager = entityManager;
     }
 
     @Transactional(readOnly = true)
-    public Page<Employee> list(Pageable pageable) {
-        LOG.debug("Request to list employees");
+    public Page<ProofEmployee> list(Pageable pageable) {
+        LOG.debug("Request to list proof employees");
         return secureDataManager.loadList(ENTITY_CLASS, pageable);
     }
 
     @Transactional(readOnly = true)
-    public Optional<Employee> findOne(Long id) {
-        LOG.debug("Request to get employee : {}", id);
+    public Optional<ProofEmployee> findOne(Long id) {
+        LOG.debug("Request to get proof employee : {}", id);
         return secureDataManager.loadOne(ENTITY_CLASS, id);
     }
 
-    public Employee create(EntityMutation<Employee> mutation) {
-        LOG.debug("Request to create employee");
+    public ProofEmployee create(EntityMutation<ProofEmployee> mutation) {
+        LOG.debug("Request to create proof employee");
         return secureDataManager.save(ENTITY_CLASS, null, normalizeMutation(mutation));
     }
 
-    public Employee update(Long id, EntityMutation<Employee> mutation) {
-        LOG.debug("Request to update employee : {}", id);
+    public ProofEmployee update(Long id, EntityMutation<ProofEmployee> mutation) {
+        LOG.debug("Request to update proof employee : {}", id);
         return secureDataManager.save(ENTITY_CLASS, id, normalizeMutation(mutation));
     }
 
-    public Employee patch(Long id, EntityMutation<Employee> mutation) {
-        LOG.debug("Request to patch employee : {}", id);
+    public ProofEmployee patch(Long id, EntityMutation<ProofEmployee> mutation) {
+        LOG.debug("Request to patch proof employee : {}", id);
         return secureDataManager.save(ENTITY_CLASS, id, normalizeMutation(mutation));
     }
 
     @Transactional(readOnly = true)
-    public Page<Employee> query(String fetchPlanCode, Pageable pageable, Map<String, Object> filters) {
-        LOG.debug("Request to query employees");
+    public Page<ProofEmployee> query(String fetchPlanCode, Pageable pageable, Map<String, Object> filters) {
+        LOG.debug("Request to query proof employees");
         SecuredLoadQuery query = new SecuredLoadQuery(
             ENTITY_CODE,
             null,
@@ -80,7 +80,7 @@ public class EmployeeService {
     }
 
     public void delete(Long id) {
-        LOG.debug("Request to delete employee : {}", id);
+        LOG.debug("Request to delete proof employee : {}", id);
         secureDataManager.delete(ENTITY_CLASS, id);
     }
 
@@ -88,37 +88,39 @@ public class EmployeeService {
         return fetchPlanCode == null || fetchPlanCode.isBlank() ? defaultFetchPlanCode : fetchPlanCode;
     }
 
-    private EntityMutation<Employee> normalizeMutation(EntityMutation<Employee> mutation) {
-        Employee employee = requireEntity(mutation);
+    private EntityMutation<ProofEmployee> normalizeMutation(EntityMutation<ProofEmployee> mutation) {
+        ProofEmployee employee = requireEntity(mutation);
         adaptDepartmentReference(employee, mutation.changedAttributes());
         return mutation;
     }
 
-    private Employee requireEntity(EntityMutation<Employee> mutation) {
+    private ProofEmployee requireEntity(EntityMutation<ProofEmployee> mutation) {
         if (mutation == null || mutation.entity() == null) {
-            throw new IllegalArgumentException("Typed employee mutation is required");
+            throw new IllegalArgumentException("Typed proof employee mutation is required");
         }
         return mutation.entity();
     }
 
-    private void adaptDepartmentReference(Employee employee, Collection<String> changedAttributes) {
+    private void adaptDepartmentReference(ProofEmployee employee, Collection<String> changedAttributes) {
         if (changedAttributes == null || !changedAttributes.contains("department")) {
             return;
         }
 
-        Department requestedDepartment = employee.getDepartment();
+        ProofDepartment requestedDepartment = employee.getDepartment();
         Long departmentId = requestedDepartment != null ? requestedDepartment.getId() : null;
         if (departmentId == null) {
             throw new IllegalArgumentException("employee.department reference requires an id");
         }
 
         secureDataManager
-            .loadOne(Department.class, departmentId)
-            .orElseThrow(() -> new AccessDeniedException("Department reference not found or not accessible: " + departmentId));
+            .loadOne(ProofDepartment.class, departmentId)
+            .orElseThrow(() ->
+                new AccessDeniedException("ProofDepartment reference not found or not accessible: " + departmentId)
+            );
 
-        Department department = entityManager.find(Department.class, departmentId);
+        ProofDepartment department = entityManager.find(ProofDepartment.class, departmentId);
         if (department == null) {
-            throw new EntityNotFoundException("Department not found: " + departmentId);
+            throw new EntityNotFoundException("ProofDepartment not found: " + departmentId);
         }
         employee.setDepartment(department);
     }

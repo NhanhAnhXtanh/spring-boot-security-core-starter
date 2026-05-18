@@ -1,9 +1,9 @@
 package com.vn.security.core.service;
 
-import com.vn.security.core.domain.Organization;
-import com.vn.security.core.service.dto.OrganizationDTO;
-import com.vn.security.core.service.dto.OrganizationDetailDTO;
-import com.vn.security.core.service.mapper.OrganizationMapper;
+import com.vn.security.core.domain.ProofOrganization;
+import com.vn.security.core.service.dto.ProofOrganizationDTO;
+import com.vn.security.core.service.dto.ProofOrganizationDetailDTO;
+import com.vn.security.core.service.mapper.ProofOrganizationMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -21,7 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Benchmark baseline service that reads organizations through direct EntityManager flow.
+ * Benchmark baseline service that reads proof organizations through a direct
+ * {@link EntityManager} flow — used to compare against the secured path.
  */
 @Service
 @Transactional(readOnly = true)
@@ -30,41 +31,41 @@ public class BenchmarkOrganizationStandardService {
     private static final Logger LOG = LoggerFactory.getLogger(BenchmarkOrganizationStandardService.class);
 
     private final EntityManager entityManager;
-    private final OrganizationMapper organizationMapper;
+    private final ProofOrganizationMapper proofOrganizationMapper;
 
-    public BenchmarkOrganizationStandardService(EntityManager entityManager, OrganizationMapper organizationMapper) {
+    public BenchmarkOrganizationStandardService(EntityManager entityManager, ProofOrganizationMapper proofOrganizationMapper) {
         this.entityManager = entityManager;
-        this.organizationMapper = organizationMapper;
+        this.proofOrganizationMapper = proofOrganizationMapper;
     }
 
-    public Page<OrganizationDTO> list(Pageable pageable) {
-        LOG.debug("Benchmark request to list organizations with standard flow");
+    public Page<ProofOrganizationDTO> list(Pageable pageable) {
+        LOG.debug("Benchmark request to list proof organizations with standard flow");
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
-        CriteriaQuery<Organization> cq = cb.createQuery(Organization.class);
-        Root<Organization> root = cq.from(Organization.class);
+        CriteriaQuery<ProofOrganization> cq = cb.createQuery(ProofOrganization.class);
+        Root<ProofOrganization> root = cq.from(ProofOrganization.class);
         applySort(pageable.getSort(), root, cq, cb);
-        List<Organization> rows = entityManager
+        List<ProofOrganization> rows = entityManager
             .createQuery(cq)
             .setFirstResult((int) pageable.getOffset())
             .setMaxResults(pageable.getPageSize())
             .getResultList();
-        return new PageImpl<>(rows, pageable, countOrganizations()).map(organizationMapper::toDto);
+        return new PageImpl<>(rows, pageable, countOrganizations()).map(proofOrganizationMapper::toDto);
     }
 
-    public Optional<OrganizationDetailDTO> findOne(Long id) {
-        LOG.debug("Benchmark request to get organization with standard flow : {}", id);
-        return Optional.ofNullable(entityManager.find(Organization.class, id)).map(organizationMapper::toDetailDto);
+    public Optional<ProofOrganizationDetailDTO> findOne(Long id) {
+        LOG.debug("Benchmark request to get proof organization with standard flow : {}", id);
+        return Optional.ofNullable(entityManager.find(ProofOrganization.class, id)).map(proofOrganizationMapper::toDetailDto);
     }
 
     private long countOrganizations() {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Long> cq = cb.createQuery(Long.class);
-        Root<Organization> root = cq.from(Organization.class);
+        Root<ProofOrganization> root = cq.from(ProofOrganization.class);
         cq.select(cb.count(root));
         return entityManager.createQuery(cq).getSingleResult();
     }
 
-    private void applySort(Sort sort, Root<Organization> root, CriteriaQuery<Organization> query, CriteriaBuilder cb) {
+    private void applySort(Sort sort, Root<ProofOrganization> root, CriteriaQuery<ProofOrganization> query, CriteriaBuilder cb) {
         if (sort == null || sort.isUnsorted()) {
             return;
         }
