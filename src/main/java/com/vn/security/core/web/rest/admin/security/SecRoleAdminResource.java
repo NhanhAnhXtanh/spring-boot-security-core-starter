@@ -5,6 +5,7 @@ import com.vn.security.core.domain.RoleType;
 import com.vn.security.core.repository.AuthorityRepository;
 import com.vn.security.core.repository.UserRepository;
 import com.vn.security.core.security.AuthoritiesConstants;
+import com.vn.security.core.security.permission.RequestPermissionSnapshot;
 import com.vn.security.core.service.dto.security.SecRoleDTO;
 import com.vn.security.core.service.security.SecPermissionService;
 import com.vn.security.core.web.rest.errors.BadRequestAlertException;
@@ -16,6 +17,8 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +66,10 @@ public class SecRoleAdminResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PostMapping("")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public ResponseEntity<SecRoleDTO> createRole(@Valid @RequestBody SecRoleDTO dto) throws URISyntaxException {
         LOG.debug("REST request to create SecRole : {}", dto);
         if (authorityRepository.findById(dto.getName()).isPresent()) {
@@ -108,6 +115,10 @@ public class SecRoleAdminResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the updated role, or {@code 400} if invalid.
      */
     @PutMapping("/{name}")
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public ResponseEntity<SecRoleDTO> updateRole(@PathVariable("name") String name, @Valid @RequestBody SecRoleDTO dto) {
         LOG.debug("REST request to update SecRole : {}", name);
         if (!name.equals(dto.getName())) {
@@ -130,6 +141,10 @@ public class SecRoleAdminResource {
      */
     @DeleteMapping("/{name}")
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public ResponseEntity<Void> deleteRole(@PathVariable("name") String name) {
         LOG.debug("REST request to delete SecRole : {}", name);
         long assignedUserCount = userRepository.countByAuthorityName(name);
