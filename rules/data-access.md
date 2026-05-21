@@ -248,3 +248,82 @@ Bạn cần đọc/ghi database?
 - `com.vn.security.core.security.data.UnconstrainedDataManager`
 - `com.vn.security.core.domain.AbstractAuditingEntity`
 - Ví dụ sử dụng: `com.vn.security.core.service.ProofDepartmentService`, `ProofEmployeeService`, `ProofOrganizationService`
+
+---
+
+## 7. Pattern cho list endpoint có filter động (đọc trước khi viết list endpoint)
+
+Đây là chỗ hay sai nhất với dev mới: thấy `unconstrainedDataManager.loadPage(Spec, Pageable)` nhận Specification → dùng cho list filter. **Đây là bypass RBAC.** `SecureDataManager` có 2 đường hợp lệ:
+
+### 7.1. Filter equality đơn giản → parameters map
+
+```java
+SecuredLoadQuery query = SecuredLoadQuery.builder()
+    .entityCode(ENTITY_CODE)
+    .parameters(Map.of("metaSource", source, "status", "PUBLISHED"))
+    .pageable(pageable)
+    .build();
+return secureDataManager.loadByQuery(ENTITY_CLASS, query);
+```
+
+`SecureQuerySpecificationFactory.build` build `WHERE field1 = v1 AND field2 = v2 ...`. **Chỉ equality** — không `LIKE`, không `OR`, không `IN`, không nested JOIN. Tự apply `checkCrud(READ)` ✓.
+
+### 7.2. Filter phức tạp (LIKE / OR / JOIN / EXISTS / ORDER BY) → JPQL custom
+
+Yêu cầu entity `@SecuredEntity(jpqlAllowed = true)`.
+
+```java
+StringBuilder jpql = new StringBuilder("select m from MetaSet m where 1=1");
+Map<String, Object> params = new LinkedHashMap<>();
+if (keyword != null) {
+    jpql.append(" and (lower(m.code) like :kw or lower(m.name) like :kw)");
+    params.put("kw", "%" + keyword.toLowerCase() + "%");
+}
+if (organizationId != null) {
+    jpql.append(" and m.organization.id = :orgId");
+    params.put("orgId", organizationId);
+}
+SecuredLoadQuery query = SecuredLoadQuery.builder()
+    .entityCode(ENTITY_CODE)
+    .jpql(jpql.toString())
+    .parameters(params)
+    .pageable(pageable)
+    .build();
+return secureDataManager.loadByQuery(ENTITY_CLASS, query);  // checkCrud(READ) before exec
+```
+
+**Bảo mật JPQL bắt buộc:**
+- JPQL template build từ code, **không bao giờ** nối chuỗi từ user input.
+- Named parameter (`:kw`, `:orgId`) — JPA tự escape, an toàn injection.
+- KHÔNG `String.format("...'%s'", userInput)` trong JPQL.
+
+### 7.3. Anti-pattern: dùng UnconstrainedDataManager cho list endpoint
+
+```java
+// ❌ SAI — bypass RBAC; user không có READ vẫn list được
+return unconstrainedDataManager.loadPage(Foo.class, spec, pageable);
+```
+
+**Authenticated ≠ authorized.** JWT chứng minh "có user đứng sau request", không chứng minh "user này có READ permission trên Foo". Nếu list endpoint dùng Unconstrained = effectively public-after-login = vỡ RBAC.
+
+→ Cần Specification → §7.1 hoặc §7.2. Unconstrained chỉ cho code hệ thống §2.
+
+---
+
+## 8. Resolve managed reference: 2 bước, không thay thế lẫn nhau
+
+```java
+// ✓ ĐÚNG — verify quyền view organization, sau đó lấy managed instance
+Organization ref = secureDataManager.loadOne(Organization.class, orgId)
+    .orElseThrow(() -> new AccessDeniedException("..."));
+Organization managed = entityManager.find(Organization.class, orgId);
+entity.setOrganization(managed);
+
+// ❌ SAI — bypass: user không có quyền READ Organization vẫn assign được
+Organization managed = entityManager.find(Organization.class, orgId);
+entity.setOrganization(managed);
+```
+
+`secureDataManager.loadOne` trả entity đã pass `checkCrud(READ)` + row-level. `entityManager.find` chỉ resolve managed reference cho cascade — không có security check.
+
+_Sections §7–§8 derived from integration session 2026-05-18._

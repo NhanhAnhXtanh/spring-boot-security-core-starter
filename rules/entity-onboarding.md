@@ -244,3 +244,68 @@ Nếu 403 mọi nơi → check Bước 4 (seed permission). Nếu "entity not re
 - Catalog scanner: `com.vn.security.core.security.catalog.MetamodelSecuredEntityCatalog`.
 - Seed permission mẫu: `src/main/resources/db/seed/seed-permissions.sql`.
 - Fetch plan mẫu: `src/main/resources/fetch-plans.yml`.
+
+---
+
+## E. Pitfalls phát hiện trong các lần tích hợp thực tế (2026-05-18)
+
+### E.1. ATTRIBUTE permission KHÔNG hỗ trợ wildcard `*` global
+
+Bước 4 nói seed `target=FQCN, target_type='ENTITY'`. Nhưng `EntityMutation.changedAttributes` (luôn cần khi `secureDataManager.save`) còn check **ATTRIBUTE-level permission** trước khi merge field.
+
+Format khác hẳn ENTITY:
+
+| target_type | target format | Hỗ trợ wildcard global `*`? |
+|---|---|---|
+| ENTITY | FQCN hoặc `*` | ✓ |
+| ATTRIBUTE | `<ENTITY_NAME_UPPERCASE>.<FIELD>` hoặc `<ENTITY_NAME>.*` | ✗ — phải seed per-entity |
+
+Action enum: `VIEW`, `EDIT` (không phải READ/CREATE/UPDATE/DELETE).
+
+Thiếu → POST/PUT 500 `No EDIT permission for X.field`. GET vẫn 200.
+
+```sql
+INSERT INTO sec_permission (id, authority_name, action, target, target_type, effect) VALUES
+  (1006, 'ROLE_ADMIN', 'VIEW', 'INVOICE.*', 'ATTRIBUTE', 'ALLOW'),
+  (1007, 'ROLE_ADMIN', 'EDIT', 'INVOICE.*', 'ATTRIBUTE', 'ALLOW'),
+  (1008, 'ROLE_USER',  'VIEW', 'INVOICE.*', 'ATTRIBUTE', 'ALLOW')
+ON CONFLICT (id) DO NOTHING;
+```
+
+### E.2. Fetch plan TUỲ CHỌN trừ khi service request fetchPlanCode
+
+Bước 5 nói "Phải có entry trong `fetch-plans.yml`". Chính xác:
+
+- **BẮT BUỘC**: service gọi `SecuredLoadQuery.builder().fetchPlanCode("...")`, hoặc dùng deprecated Map-returning methods, hoặc dùng `SecureEntitySerializer`.
+- **TUỲ CHỌN**: service chỉ dùng typed methods (`loadList/loadOne/save/delete`) hoặc `loadByQuery` không pass `fetchPlanCode` → thiếu entry KHÔNG fail app, JPA dùng fetchgraph mặc định.
+
+**Cảnh báo shadowing**: `security-core.fetch-plans.config: classpath:fetch-plans.yml` mặc định trỏ file consumer. Consumer tạo file này = starter's bundled default bị shadow hoàn toàn → entity demo starter mất fetch plan. Phải copy lại các entry starter vào consumer file nếu test/code gọi tới.
+
+### E.3. `security-core.cache.enabled=false` không thật sự skip cache
+
+Set → boot crash `Parameter 3 of constructor in UserService required a bean of type 'org.springframework.cache.CacheManager'`. Workaround: giữ `true` mặc định. Bug đã log starter side.
+
+### E.4. `Pageable.unpaged()` → HTTP 500
+
+`secureDataManager.loadList(Class, Pageable.unpaged())` trả 500 `"message":null`. Workaround: `PageRequest.of(0, 10_000)`. Nếu cần unpaged thật → redesign endpoint (luôn paginate).
+
+### E.5. Entity `@OneToOne` cascade với reverse `@ManyToOne` — phải 2-phase save
+
+Pattern: `Parent.currentChild @OneToOne(cascade=ALL)` + `Child.parent @ManyToOne`. Single-pass save fail `TransientPropertyValueException` vì cascade cần parent đã persisted để set child.parent.
+
+→ Thứ tự bắt buộc:
+1. Save parent alone (không set currentChild).
+2. Save child với parent reference đã managed.
+3. Save parent lần 2 set currentChild = saved child.
+
+### E.6. Demo entity starter chiếm namespace nghiệp vụ consumer
+
+Starter ship demo entity (`Organization`, `Department`, `Employee`) với `@Service` + REST endpoint `/api/organizations` etc. Consumer có domain trùng tên → boot crash `ConflictingBeanDefinitionException` + `Ambiguous mapping`.
+
+Workaround consumer (giữ class name + table name nguyên):
+- `@Service("appOrganizationService")` — distinct bean name
+- `@Entity(name = "AppOrganization")` — distinct JPA entity name
+- `@SecuredEntity(code = "app-organization")` — distinct catalog code
+- `@RequestMapping("/api/app/organizations")` — distinct URL
+
+_Section E derived from integration session 2026-05-18._
