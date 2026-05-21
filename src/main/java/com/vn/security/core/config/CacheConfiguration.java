@@ -60,13 +60,17 @@ public class CacheConfiguration {
         config.getNetworkConfig().setPort(5701);
         config.getNetworkConfig().setPortAutoIncrement(true);
 
+        ManagementCenterConfig mcConfig = new ManagementCenterConfig();
         if (env.acceptsProfiles(Profiles.of(AppConstants.SPRING_PROFILE_DEVELOPMENT))) {
-            System.setProperty("hazelcast.local.localAddress", "127.0.0.1");
+            System.setProperty("hazelcast.local.localAddress", "0.0.0.0");
             config.getNetworkConfig().getJoin().getAwsConfig().setEnabled(false);
             config.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
             config.getNetworkConfig().getJoin().getTcpIpConfig().setEnabled(false);
+            mcConfig.setScriptingEnabled(true)
+                    .setConsoleEnabled(true)
+                    .setDataAccessEnabled(true);
         }
-        config.setManagementCenterConfig(new ManagementCenterConfig());
+        config.setManagementCenterConfig(mcConfig);
         config.addMapConfig(initializeDefaultMapConfig());
         config.addMapConfig(initializeDomainMapConfig());
         config.addMapConfig(initializePermissionMatrixMapConfig());
