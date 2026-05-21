@@ -19,6 +19,7 @@ Khi một dự án khác (consumer) implement starter này, **mọi data access 
 |---|---|
 | [`rules/data-access.md`](rules/data-access.md) | **Mọi** thao tác đọc/ghi database. Phân biệt `SecureDataManager` vs `UnconstrainedDataManager`, quy ước `JpaRepository` vs `EntityManager`. |
 | [`rules/entity-onboarding.md`](rules/entity-onboarding.md) | Khi **thêm entity mới** hoặc **refactor entity cũ** trong consumer. 6 bước bắt buộc + checklist review. |
+| [`rules/cache-debug.md`](rules/cache-debug.md) | Khi cần **xem data Hazelcast cache** (debug permission stale, verify `@CacheEvict`, kiểm tra invalidation sau khi admin sửa role). Setup MC + script mẫu + workflow debug. |
 
 > Khi có rule mới được thêm, mục này phải cập nhật. AI đọc bảng này để biết những file cần load vào context.
 
