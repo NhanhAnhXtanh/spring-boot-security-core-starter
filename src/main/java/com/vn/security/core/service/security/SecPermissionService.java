@@ -1,5 +1,6 @@
 package com.vn.security.core.service.security;
 
+import com.vn.security.core.repository.UserRepository;
 import com.vn.security.core.security.domain.SecPermission;
 import com.vn.security.core.security.permission.RequestPermissionSnapshot;
 import com.vn.security.core.security.permission.TargetType;
@@ -10,6 +11,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +46,10 @@ public class SecPermissionService {
      * @param entity the permission to persist (must have no id set)
      * @return the saved entity
      */
-    @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public SecPermission save(SecPermission entity) {
         LOG.debug("Saving SecPermission and evicting permission cache: {}", entity);
         return secPermissionStore.save(entity);
@@ -56,7 +61,10 @@ public class SecPermissionService {
      * @param entity the permission to update (must have an id set)
      * @return the saved entity
      */
-    @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public SecPermission update(SecPermission entity) {
         LOG.debug("Updating SecPermission and evicting permission cache: {}", entity);
         return secPermissionStore.save(entity);
@@ -67,7 +75,10 @@ public class SecPermissionService {
      *
      * @param entities the permissions to delete
      */
-    @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public void deleteAll(Collection<SecPermission> entities) {
         LOG.debug("Deleting {} SecPermission(s) and evicting permission cache", entities.size());
         secPermissionStore.deleteAll(entities);
@@ -79,7 +90,10 @@ public class SecPermissionService {
      *
      * @param id the id of the permission to delete
      */
-    @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public void deleteById(Long id) {
         LOG.debug("Deleting SecPermission id={} and evicting permission cache", id);
         secPermissionStore
@@ -101,7 +115,10 @@ public class SecPermissionService {
      *
      * @param authorityName the authority name whose permissions should be removed
      */
-    @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public void deleteAllByAuthorityName(String authorityName) {
         LOG.debug("Deleting all SecPermissions for authority={} and evicting permission cache", authorityName);
         secPermissionStore.deleteByAuthorityName(authorityName);
@@ -142,7 +159,10 @@ public class SecPermissionService {
      * Should be called when an external operation (e.g. bulk import) modifies permissions
      * outside the normal service write paths.
      */
-    @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public void evictPermissionCache() {
         LOG.debug("Explicitly evicting permission-matrix cache");
     }
@@ -157,12 +177,18 @@ public class SecPermissionService {
         return secPermissionStore.findAll();
     }
 
-    @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public void deleteSpecificEntityPermissions(String authorityName, String action, String effect) {
         secPermissionStore.deleteSpecificEntityPermissions(authorityName, action, effect);
     }
 
-    @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true)
+    @Caching(evict = {
+        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
+        @CacheEvict(cacheNames = UserRepository.USERS_BY_LOGIN_CACHE, allEntries = true)
+    })
     public void deleteSpecificAttributePermissions(
         String authorityName,
         String entityPrefix,
