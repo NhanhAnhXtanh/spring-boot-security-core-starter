@@ -1,6 +1,6 @@
 package com.vn.security.core.service.security;
 
-import com.vn.security.core.security.UserCacheNames;
+import com.vn.security.core.security.AuthorityCacheNames;
 import com.vn.security.core.security.domain.SecPermission;
 import com.vn.security.core.security.permission.RequestPermissionSnapshot;
 import com.vn.security.core.security.permission.TargetType;
@@ -48,7 +48,7 @@ public class SecPermissionService {
      */
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public SecPermission save(SecPermission entity) {
         LOG.debug("Saving SecPermission and evicting permission cache: {}", entity);
@@ -63,7 +63,7 @@ public class SecPermissionService {
      */
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public SecPermission update(SecPermission entity) {
         LOG.debug("Updating SecPermission and evicting permission cache: {}", entity);
@@ -77,7 +77,7 @@ public class SecPermissionService {
      */
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public void deleteAll(Collection<SecPermission> entities) {
         LOG.debug("Deleting {} SecPermission(s) and evicting permission cache", entities.size());
@@ -92,7 +92,7 @@ public class SecPermissionService {
      */
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public void deleteById(Long id) {
         LOG.debug("Deleting SecPermission id={} and evicting permission cache", id);
@@ -117,7 +117,7 @@ public class SecPermissionService {
      */
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public void deleteAllByAuthorityName(String authorityName) {
         LOG.debug("Deleting all SecPermissions for authority={} and evicting permission cache", authorityName);
@@ -161,7 +161,7 @@ public class SecPermissionService {
      */
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public void evictPermissionCache() {
         LOG.debug("Explicitly evicting permission-matrix cache");
@@ -179,7 +179,7 @@ public class SecPermissionService {
 
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public void deleteSpecificEntityPermissions(String authorityName, String action, String effect) {
         secPermissionStore.deleteSpecificEntityPermissions(authorityName, action, effect);
@@ -187,7 +187,7 @@ public class SecPermissionService {
 
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public void deleteSpecificAttributePermissions(
         String authorityName,

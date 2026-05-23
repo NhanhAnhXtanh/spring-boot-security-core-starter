@@ -3,7 +3,7 @@ package com.vn.security.core.config;
 import com.hazelcast.config.*;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.vn.security.core.security.UserCacheNames;
+import com.vn.security.core.security.AuthorityCacheNames;
 import com.vn.security.core.security.permission.RequestPermissionSnapshot;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -28,10 +28,10 @@ public class CacheConfiguration {
     private static final int DEFAULT_TTL_SECONDS = 3600;
     private static final int DEFAULT_BACKUP_COUNT = 1;
     /**
-     * Short TTL safety net for {@code usersByLogin}. Consumer identity adapters
-     * can use this cache name and rely on starter permission/role writes to evict it.
+     * Short TTL safety net for username -> authority resolution. Consumer authority
+     * providers can use this cache name and rely on starter permission/role writes to evict it.
      */
-    private static final int USERS_BY_LOGIN_TTL_SECONDS = 60;
+    private static final int USER_AUTHORITIES_TTL_SECONDS = 60;
 
     private final Environment env;
 
@@ -80,7 +80,7 @@ public class CacheConfiguration {
         config.addMapConfig(initializeDefaultMapConfig());
         config.addMapConfig(initializeDomainMapConfig());
         config.addMapConfig(initializePermissionMatrixMapConfig());
-        config.addMapConfig(initializeUsersByLoginMapConfig());
+        config.addMapConfig(initializeUserAuthoritiesMapConfig());
         return Hazelcast.newHazelcastInstance(config);
     }
 
@@ -98,9 +98,9 @@ public class CacheConfiguration {
         return mapConfig;
     }
 
-    private MapConfig initializeUsersByLoginMapConfig() {
-        MapConfig mapConfig = new MapConfig(UserCacheNames.USERS_BY_LOGIN);
-        mapConfig.setTimeToLiveSeconds(USERS_BY_LOGIN_TTL_SECONDS);
+    private MapConfig initializeUserAuthoritiesMapConfig() {
+        MapConfig mapConfig = new MapConfig(AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME);
+        mapConfig.setTimeToLiveSeconds(USER_AUTHORITIES_TTL_SECONDS);
         mapConfig.setBackupCount(DEFAULT_BACKUP_COUNT);
         mapConfig.getEvictionConfig().setEvictionPolicy(EvictionPolicy.LRU);
         mapConfig.getEvictionConfig().setMaxSizePolicy(MaxSizePolicy.USED_HEAP_SIZE);

@@ -25,7 +25,7 @@ import com.vn.security.core.util.HeaderUtil;
  */
 @RestController
 @RequestMapping("/api/admin/sec/menu-permissions")
-@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+@PreAuthorize("@securityCoreAuthorization.hasAuthority('" + AuthoritiesConstants.ADMIN + "')")
 public class AdminMenuPermissionResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(AdminMenuPermissionResource.class);

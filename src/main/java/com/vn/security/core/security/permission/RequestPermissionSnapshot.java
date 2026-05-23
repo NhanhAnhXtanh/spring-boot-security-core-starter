@@ -2,20 +2,16 @@ package com.vn.security.core.security.permission;
 
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
-import com.vn.security.core.security.AcceptsGrantedAuthorities;
+import com.vn.security.core.security.CurrentUserAuthorityResolver;
 import com.vn.security.core.security.domain.SecPermission;
 import com.vn.security.core.security.store.SecPermissionStore;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 
@@ -49,6 +45,7 @@ public class RequestPermissionSnapshot {
 
     private final SecPermissionStore secPermissionStore;
     private final HazelcastInstance hazelcastInstance;
+    private final CurrentUserAuthorityResolver authorityResolver;
 
     /** Cached authority names for the current request; null if not yet loaded. */
     private Collection<String> cachedAuthorities;
@@ -56,9 +53,14 @@ public class RequestPermissionSnapshot {
     /** Cached permission matrix for the current request; null if not yet loaded. */
     private PermissionMatrix cachedMatrix;
 
-    public RequestPermissionSnapshot(SecPermissionStore secPermissionStore, HazelcastInstance hazelcastInstance) {
+    public RequestPermissionSnapshot(
+        SecPermissionStore secPermissionStore,
+        HazelcastInstance hazelcastInstance,
+        CurrentUserAuthorityResolver authorityResolver
+    ) {
         this.secPermissionStore = secPermissionStore;
         this.hazelcastInstance = hazelcastInstance;
+        this.authorityResolver = authorityResolver;
     }
 
     /**
@@ -112,19 +114,7 @@ public class RequestPermissionSnapshot {
         if (auth == null) {
             return List.of();
         }
-        Set<String> jwtAuthorities = resolveAuthorities(auth).stream().map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
-        return List.copyOf(jwtAuthorities);
-    }
-
-    private Collection<? extends GrantedAuthority> resolveAuthorities(Authentication authentication) {
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof AcceptsGrantedAuthorities acceptsGrantedAuthorities) {
-            return acceptsGrantedAuthorities.getGrantedAuthorities();
-        }
-        if (principal instanceof UserDetails userDetails) {
-            return userDetails.getAuthorities();
-        }
-        return authentication.getAuthorities();
+        return List.copyOf(authorityResolver.resolveAuthorities(auth));
     }
 
     /**

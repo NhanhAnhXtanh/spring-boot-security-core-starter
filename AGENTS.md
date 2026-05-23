@@ -18,7 +18,6 @@ Khi một dự án khác (consumer) implement starter này, **mọi data access 
 | File | Khi nào áp dụng |
 |---|---|
 | [`rules/data-access.md`](rules/data-access.md) | **Mọi** thao tác đọc/ghi database. Phân biệt `SecureDataManager` vs `UnconstrainedDataManager`, quy ước `JpaRepository` vs `EntityManager`. |
-| [`rules/identity-integration.md`](rules/identity-integration.md) | Khi consumer tích hợp bảng user riêng, đăng ký/login/account/user-admin. Chuẩn `SecurityUser<ID>` + `SecurityIdentityService`. |
 | [`rules/dynamic-authorization.md`](rules/dynamic-authorization.md) | Khi consumer tự làm login/logout/register/SSO và starter chỉ phân quyền theo username. Chuẩn role động + permission động + menu động. |
 | [`rules/dynamic-authorization-plan.md`](rules/dynamic-authorization-plan.md) | Khi triển khai code cho mode username-only authorization. Phase-by-phase plan để gỡ auth khỏi starter. |
 | [`rules/entity-onboarding.md`](rules/entity-onboarding.md) | Khi **thêm entity mới** hoặc **refactor entity cũ** trong consumer. 6 bước bắt buộc + checklist review. |

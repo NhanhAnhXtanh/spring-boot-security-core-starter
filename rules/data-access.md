@@ -17,7 +17,7 @@ Khi viết code đụng đến database trong dự án consumer:
 
 **Quy ước về persistence layer:**
 
-- **`JpaRepository` → KHÔNG dùng cho entity nghiệp vụ.** Starter chỉ sở hữu repository hạ tầng RBAC như `AuthorityRepository`. Consumer được tạo repository cho user/identity store của họ khi implement `SecurityIdentityService`, nhưng không tạo `JpaRepository` cho entity nghiệp vụ.
+- **`JpaRepository` → KHÔNG dùng cho entity nghiệp vụ.** Starter chỉ sở hữu repository hạ tầng RBAC như `AuthorityRepository`. Consumer được tạo repository cho user/identity/auth store của họ, nhưng không tạo `JpaRepository` cho entity nghiệp vụ.
 - **`EntityManager` → là kênh chính** cho mọi entity còn lại. Nhưng KHÔNG gọi `entityManager.find/persist/merge/remove` thẳng từ service/controller cho entity nghiệp vụ — đi qua `SecureDataManager` (hoặc `UnconstrainedDataManager` khi thoả điều kiện ở §2).
 - `EntityManager` chỉ được phép gọi trực tiếp để **resolve managed reference** sau khi đã verify quyền qua `SecureDataManager.loadOne(...)` — xem mẫu `ProofDepartmentService#adaptOrganizationReference`.
 

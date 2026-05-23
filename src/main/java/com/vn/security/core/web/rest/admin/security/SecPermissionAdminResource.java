@@ -42,7 +42,7 @@ import com.vn.security.core.util.ResponseUtil;
  */
 @RestController
 @RequestMapping("/api/admin/sec/permissions")
-@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+@PreAuthorize("@securityCoreAuthorization.hasAuthority('" + AuthoritiesConstants.ADMIN + "')")
 public class SecPermissionAdminResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(SecPermissionAdminResource.class);

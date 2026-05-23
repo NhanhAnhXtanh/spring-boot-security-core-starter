@@ -7,9 +7,7 @@ public class ApplicationProperties {
 
     private final Liquibase liquibase = new Liquibase();
     private final FetchPlans fetchPlans = new FetchPlans();
-    private final Security security = new Security();
     private final Cors cors = new Cors();
-    private final Seed seed = new Seed();
 
     public Liquibase getLiquibase() {
         return liquibase;
@@ -19,47 +17,8 @@ public class ApplicationProperties {
         return fetchPlans;
     }
 
-    public Security getSecurity() {
-        return security;
-    }
-
     public Cors getCors() {
         return cors;
-    }
-
-    public Seed getSeed() {
-        return seed;
-    }
-
-    public static class Seed {
-
-        private boolean enabled = false;
-        private String username = "admin";
-        private String password = "admin";
-
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public String getUsername() {
-            return username;
-        }
-
-        public void setUsername(String username) {
-            this.username = username;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
     }
 
     public static class Liquibase {
@@ -85,46 +44,6 @@ public class ApplicationProperties {
 
         public void setConfig(String config) {
             this.config = config;
-        }
-    }
-
-    public static class Security {
-
-        private final Jwt jwt = new Jwt();
-
-        public Jwt getJwt() {
-            return jwt;
-        }
-
-        public static class Jwt {
-
-            private String base64Secret;
-            private long tokenValidityInSeconds = 86400;
-            private long tokenValidityInSecondsForRememberMe = 2592000;
-
-            public String getBase64Secret() {
-                return base64Secret;
-            }
-
-            public void setBase64Secret(String base64Secret) {
-                this.base64Secret = base64Secret;
-            }
-
-            public long getTokenValidityInSeconds() {
-                return tokenValidityInSeconds;
-            }
-
-            public void setTokenValidityInSeconds(long tokenValidityInSeconds) {
-                this.tokenValidityInSeconds = tokenValidityInSeconds;
-            }
-
-            public long getTokenValidityInSecondsForRememberMe() {
-                return tokenValidityInSecondsForRememberMe;
-            }
-
-            public void setTokenValidityInSecondsForRememberMe(long tokenValidityInSecondsForRememberMe) {
-                this.tokenValidityInSecondsForRememberMe = tokenValidityInSecondsForRememberMe;
-            }
         }
     }
 

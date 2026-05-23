@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/admin/sec/catalog")
-@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+@PreAuthorize("@securityCoreAuthorization.hasAuthority('" + AuthoritiesConstants.ADMIN + "')")
 public class SecCatalogAdminResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(SecCatalogAdminResource.class);

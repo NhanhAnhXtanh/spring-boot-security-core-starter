@@ -5,9 +5,9 @@
 
 ---
 
-## Trạng thái hiện tại
+## Trạng thái trước refactor
 
-Code hiện tại vẫn còn một số phần authentication trong starter:
+Trước khi chuyển sang username-only authorization, code còn một số phần authentication trong starter:
 
 - `AuthenticateController` expose `/api/authenticate`
 - `SecurityJwtConfiguration` tạo `JwtDecoder`, `JwtEncoder`, `jwtAuthenticationConverter`
@@ -24,7 +24,7 @@ Authorization engine hiện đã có:
 - `SecPermissionService`
 - `CurrentUserMenuPermissionService`
 
-Mục tiêu là gỡ nhóm authentication và sửa nhóm authorization để lấy role động theo username.
+Những phần này đã được đưa vào danh sách cần gỡ để starter chỉ giữ authorization.
 
 ---
 
@@ -94,7 +94,7 @@ Kết quả:
 
 ## Phase 3: Tách authentication config khỏi starter
 
-Gỡ hoặc conditional hóa:
+Gỡ khỏi starter:
 
 - `AuthenticateController`
 - `SecurityJwtConfiguration`
@@ -106,24 +106,11 @@ Gỡ hoặc conditional hóa:
 
 Sửa `SecurityConfiguration`:
 
-Option khuyến nghị: starter không tạo `SecurityFilterChain` mặc định nữa, hoặc chỉ tạo khi property bật.
-
-```yaml
-security-core:
-  auth:
-    enabled: false
-```
-
 Trong mode mới:
 
 - Consumer tự khai báo `SecurityFilterChain`.
 - Consumer tự khai báo JWT/session/SSO.
 - Starter chỉ đọc `SecurityContextHolder`.
-
-Nếu vẫn muốn giữ backward compatibility tạm thời:
-
-- Đặt toàn bộ authentication auto-config sau property `security-core.auth.enabled=true`.
-- Default nên là `false` cho mode mới.
 
 ---
 
@@ -159,8 +146,7 @@ Không implement force-login mặc định nếu consumer auth hoàn toàn sở 
 Cập nhật:
 
 - README: starter không có `/api/authenticate` trong mode mới.
-- `rules/identity-integration.md`: đánh dấu là legacy/optional mode nếu còn giữ.
-- `rules/cache-debug.md`: đổi `usersByLogin` thành `userAuthoritiesByUsername`.
+- `rules/cache-debug.md`: đổi cache login cũ thành `userAuthoritiesByUsername`.
 - Ví dụ consumer:
   - Spring Security JWT
   - SSO/OAuth2
@@ -191,7 +177,6 @@ Authentication.getName() == username
 
 Không yêu cầu:
 
-- Consumer implement `SecurityIdentityService`
 - Consumer dùng starter JWT
 - Consumer dùng starter login endpoint
 

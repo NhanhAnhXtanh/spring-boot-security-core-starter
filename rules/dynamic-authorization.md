@@ -172,7 +172,7 @@ Cache nên tách rõ:
 
 Tên cache hiện có:
 
-- `UserCacheNames.USERS_BY_LOGIN` có thể tiếp tục dùng cho "authorities by username" để tương thích, nhưng tên mới rõ hơn nên là `USER_AUTHORITIES_BY_USERNAME`.
+- Dùng cache name `AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME` nếu provider cache role theo username.
 
 Eviction bắt buộc:
 

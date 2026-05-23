@@ -4,7 +4,7 @@ import com.vn.security.core.domain.Authority;
 import com.vn.security.core.domain.RoleType;
 import com.vn.security.core.repository.AuthorityRepository;
 import com.vn.security.core.security.AuthoritiesConstants;
-import com.vn.security.core.security.UserCacheNames;
+import com.vn.security.core.security.AuthorityCacheNames;
 import com.vn.security.core.security.permission.RequestPermissionSnapshot;
 import com.vn.security.core.service.dto.security.SecRoleDTO;
 import com.vn.security.core.service.security.SecPermissionService;
@@ -31,7 +31,7 @@ import com.vn.security.core.util.ResponseUtil;
  */
 @RestController
 @RequestMapping("/api/admin/sec/roles")
-@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+@PreAuthorize("@securityCoreAuthorization.hasAuthority('" + AuthoritiesConstants.ADMIN + "')")
 public class SecRoleAdminResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(SecRoleAdminResource.class);
@@ -60,7 +60,7 @@ public class SecRoleAdminResource {
     @PostMapping("")
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public ResponseEntity<SecRoleDTO> createRole(@Valid @RequestBody SecRoleDTO dto) throws URISyntaxException {
         LOG.debug("REST request to create SecRole : {}", dto);
@@ -109,7 +109,7 @@ public class SecRoleAdminResource {
     @PutMapping("/{name}")
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public ResponseEntity<SecRoleDTO> updateRole(@PathVariable("name") String name, @Valid @RequestBody SecRoleDTO dto) {
         LOG.debug("REST request to update SecRole : {}", name);
@@ -135,7 +135,7 @@ public class SecRoleAdminResource {
     @Transactional
     @Caching(evict = {
         @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = UserCacheNames.USERS_BY_LOGIN, allEntries = true)
+        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
     })
     public ResponseEntity<Void> deleteRole(@PathVariable("name") String name) {
         LOG.debug("REST request to delete SecRole : {}", name);

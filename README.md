@@ -1,6 +1,6 @@
 # Spring Boot Security Core Starter
 
-Reusable Spring Boot starter cung cấp sẵn JWT authentication, RBAC (role + permission + row-policy + attribute-level), auditing, fetch plans và security utilities cho các microservice nội bộ.
+Reusable Spring Boot starter cung cấp authorization core: RBAC (role + permission + row-policy + attribute-level), auditing, fetch plans và security utilities cho các microservice nội bộ. Consumer tự sở hữu login/logout/register/SSO.
 
 - Spring Boot 4.0.x
 - Java 21
@@ -26,7 +26,7 @@ Reusable Spring Boot starter cung cấp sẵn JWT authentication, RBAC (role + p
 
 | Module | Mô tả |
 |---|---|
-| **JWT authentication** | HS512, login `/api/authenticate`. User lifecycle (register/account/change password/user admin) do consumer sở hữu qua user table riêng. |
+| **Authorization core** | Starter đọc username từ Spring Security `Authentication` và resolve role động qua `CurrentUserAuthorityProvider`. Consumer tự làm login/logout/register/SSO. |
 | **RBAC + ABAC** | `@SecuredEntity` + `SecuredEntityCatalog` + permission table `sec_permission` (action × target × authority × effect). |
 | **Row-level security** | Row policy evaluator áp filter trên mọi `SecureDataManager.loadList/loadOne`. |
 | **Attribute-level check** | `EntityMutation.changedAttributes` quyết định cột nào được phép set. |
@@ -84,11 +84,6 @@ spring:
     change-log: classpath:config/liquibase/master.xml
 
 security-core:
-  security:
-    jwt:
-      base64-secret: <base64-encoded-secret-key>     # bắt buộc — dùng cho HS512
-      token-validity-in-seconds: 86400
-      token-validity-in-seconds-for-remember-me: 2592000
   cors:
     allowed-origins: 'https://your-app.com'
     allowed-methods: '*'
@@ -99,18 +94,10 @@ security-core:
     config: classpath:fetch-plans.yml
 ```
 
-> JWT secret cần đủ dài cho thuật toán HS512 (≥ 512 bit). Sinh nhanh bằng:
-> ```bash
-> openssl rand -base64 64
-> ```
-
 ## Properties tham khảo
 
 | Key | Mặc định | Mô tả |
 |---|---|---|
-| `security-core.security.jwt.base64-secret` | — | Khóa bí mật cho JWT (Base64). |
-| `security-core.security.jwt.token-validity-in-seconds` | `0` | Thời hạn token thường. |
-| `security-core.security.jwt.token-validity-in-seconds-for-remember-me` | `0` | Thời hạn token "remember me". |
 | `security-core.cors.allowed-origins` | — | Danh sách origin được phép (csv). |
 | `security-core.cors.allowed-methods` | `*` | HTTP methods cho phép. |
 | `security-core.cors.allowed-headers` | `*` | Headers cho phép. |
@@ -119,15 +106,12 @@ security-core:
 | `security-core.fetch-plans.config` | `classpath:fetch-plans.yml` | File định nghĩa fetch plans. |
 | `security-core.liquibase.async-start` | `false` | Bật Liquibase chạy async. |
 | `security-core.cache.enabled` | `true` | Bật/tắt Hazelcast cache. |
-| `security-core.seed.enabled` | `false` | Không còn seed user mặc định. Consumer tự seed user trong migration/service của app. |
 
 ## REST endpoints có sẵn
 
 | Method | Path | Mô tả |
 |---|---|---|
-| POST | `/api/authenticate` | Login → trả JWT. |
-| GET | `/api/authenticate` | Check user hiện tại có authenticated không. |
-| Consumer-owned | `/api/register`, `/api/account`, `/api/account/change-password`, `/api/admin/users/**` | Consumer tự implement vì consumer sở hữu user table/schema/business rule. |
+| Consumer-owned | `/api/authenticate`, `/api/register`, `/api/account`, `/api/account/change-password`, `/api/admin/users/**`, SSO callbacks | Consumer tự implement vì consumer sở hữu authentication/user lifecycle. |
 | `*` | `/api/admin/**` | Yêu cầu authority `ROLE_ADMIN`. |
 | `*` | `/api/**` | Yêu cầu authenticated. |
 
@@ -138,7 +122,6 @@ security-core:
 | Tài liệu | Khi nào đọc | Tóm tắt |
 |---|---|---|
 | [`rules/data-access.md`](rules/data-access.md) | Trước khi viết bất kỳ code đụng DB | Bắt buộc dùng `SecureDataManager` (CRUD nghiệp vụ) hoặc `UnconstrainedDataManager` (system/bootstrap/migration). **Không tạo thêm `JpaRepository`** cho entity nghiệp vụ. User entity của consumer là ngoại lệ vì consumer sở hữu identity store. |
-| [`rules/identity-integration.md`](rules/identity-integration.md) | Khi tích hợp user/login/register/account | Chuẩn consumer-owned identity: `SecurityUser<ID>` + user repository riêng + `SecurityIdentityService` + registration/account tự viết. |
 | [`rules/dynamic-authorization.md`](rules/dynamic-authorization.md) | Khi consumer tự làm login/logout/register/SSO | Chuẩn username-only auth boundary: starter resolve role động theo username, rồi áp permission/menu động. |
 | [`rules/dynamic-authorization-plan.md`](rules/dynamic-authorization-plan.md) | Khi triển khai mode username-only authorization | Kế hoạch từng phase: thêm authority provider, sửa permission/menu resolver, gỡ auth/JWT khỏi starter. |
 | [`rules/entity-onboarding.md`](rules/entity-onboarding.md) | Khi thêm entity mới hoặc refactor entity cũ | Quy trình 6 bước: tạo entity + `@SecuredEntity` → `@EntityScan` → migration → seed permission → fetch plan → service/REST. Có checklist review PR và bảng "bẫy hay gặp". |
@@ -199,16 +182,22 @@ spring:
 
 Bỏ Hazelcast / Liquibase ra khỏi classpath cũng tự khiến config tương ứng không kích hoạt (nhờ `@ConditionalOnClass`).
 
-## Quick start identity cho consumer
+## Quick start authorization cho consumer
 
-Starter không seed user và không tạo `sec_user`. Consumer cần làm 4 việc:
+Consumer tự làm authentication. Starter chỉ cần Spring Security context có username:
 
-1. Tạo entity user riêng, ví dụ `AppUser extends SecurityUser<UUID>`.
-2. Tạo migration cho `app_user` và bảng join role, ví dụ `app_user_authority`.
-3. Tạo `AppUserRepository` và implement `SecurityIdentityService`.
-4. Tự viết register/account/change-password/user-admin theo business của app.
+```java
+Authentication.getName() == username
+```
 
-Ví dụ entity:
+Consumer cần làm 4 việc:
+
+1. Tạo login/logout/register/account/SSO và `SecurityFilterChain` trong app consumer.
+2. Tạo user table/user-role mapping nếu app cần local user, ví dụ `AppUser extends SecurityUser<UUID>`.
+3. Implement `CurrentUserAuthorityProvider` để map `username -> ROLE_*`.
+4. Seed role trong `sec_authority` và permission/menu trong bảng starter.
+
+Ví dụ optional base user entity:
 
 ```java
 @Entity
@@ -224,39 +213,23 @@ public class AppUser extends SecurityUser<UUID> {
 }
 ```
 
-Ví dụ login adapter:
+Ví dụ dynamic authority provider:
 
 ```java
 @Service
-public class AppSecurityIdentityService implements SecurityIdentityService {
-    private final AppUserRepository users;
+public class AppAuthorityProvider implements CurrentUserAuthorityProvider {
+    private final AppUserRoleService roles;
 
-    public SecurityPrincipal loadByLogin(String login) {
-        AppUser user = users.findOneWithAuthoritiesByLogin(login.toLowerCase(Locale.ENGLISH))
-            .orElseThrow(() -> new UsernameNotFoundException(login));
-
-        String userId = user.getId().toString();
-        return new DefaultSecurityPrincipal(
-            userId,
-            user.getUsername(),
-            user.getPassword(),
-            user.isEnabled(),
-            user.getAuthorities(),
-            Map.of(SecurityUtils.USER_ID_CLAIM, userId)
-        );
+    @Override
+    public Collection<String> getAuthorities(String username) {
+        return roles.findRoleNamesByUsername(username);
     }
 }
 ```
 
-Sau khi consumer seed/tạo user, login qua endpoint starter:
+Sau đó mọi check CRUD/row/attribute/menu của starter dùng role động từ provider này.
 
-```bash
-curl -X POST http://localhost:8080/api/authenticate \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin","rememberMe":false}'
-```
-
-Xem chi tiết trong [`rules/identity-integration.md`](rules/identity-integration.md).
+Xem chi tiết trong [`rules/dynamic-authorization.md`](rules/dynamic-authorization.md).
 
 ## Seed SQL (tuỳ chọn)
 

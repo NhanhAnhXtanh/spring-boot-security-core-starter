@@ -1,19 +1,13 @@
 package com.vn.security.core.security.bridge;
 
-import com.vn.security.core.domain.Authority;
-import com.vn.security.core.repository.AuthorityRepository;
-import com.vn.security.core.security.AcceptsGrantedAuthorities;
+import com.vn.security.core.security.CurrentUserAuthorityResolver;
 import com.vn.security.core.security.permission.RequestPermissionSnapshot;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 /**
@@ -29,12 +23,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class MergedSecurityContextBridge implements SecurityContextBridge {
 
-    private final AuthorityRepository authorityRepository;
     private final RequestPermissionSnapshot requestPermissionSnapshot;
+    private final CurrentUserAuthorityResolver authorityResolver;
 
-    public MergedSecurityContextBridge(AuthorityRepository authorityRepository, RequestPermissionSnapshot requestPermissionSnapshot) {
-        this.authorityRepository = authorityRepository;
+    public MergedSecurityContextBridge(
+        RequestPermissionSnapshot requestPermissionSnapshot,
+        CurrentUserAuthorityResolver authorityResolver
+    ) {
         this.requestPermissionSnapshot = requestPermissionSnapshot;
+        this.authorityResolver = authorityResolver;
     }
 
     @Override
@@ -57,14 +54,7 @@ public class MergedSecurityContextBridge implements SecurityContextBridge {
         if (auth == null) {
             return List.of();
         }
-        Set<String> jwtAuthorities = resolveAuthorities(auth).stream().map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
-        // D-16: validate against sec_authority table; drop phantom names not backed by a DB row
-        Set<String> validNames = authorityRepository
-            .findAllById(jwtAuthorities)
-            .stream()
-            .map(Authority::getName)
-            .collect(Collectors.toSet());
-        return jwtAuthorities.stream().filter(validNames::contains).toList();
+        return authorityResolver.resolveAuthorities(auth);
     }
 
     @Override
@@ -73,20 +63,9 @@ public class MergedSecurityContextBridge implements SecurityContextBridge {
         return (
             auth != null &&
             auth.isAuthenticated() &&
-            resolveAuthorities(auth)
+            authorityResolver.resolveAuthorities(auth)
                 .stream()
-                .noneMatch(a -> "ROLE_ANONYMOUS".equals(a.getAuthority()))
+                .noneMatch("ROLE_ANONYMOUS"::equals)
         );
-    }
-
-    private Collection<? extends GrantedAuthority> resolveAuthorities(Authentication authentication) {
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof AcceptsGrantedAuthorities acceptsGrantedAuthorities) {
-            return acceptsGrantedAuthorities.getGrantedAuthorities();
-        }
-        if (principal instanceof UserDetails userDetails) {
-            return userDetails.getAuthorities();
-        }
-        return authentication.getAuthorities();
     }
 }

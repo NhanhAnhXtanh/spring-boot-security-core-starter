@@ -22,12 +22,12 @@ Cache thực tế starter populate vào Hazelcast:
 
 | Map name | Key | Value | Populate khi | Evict khi |
 |---|---|---|---|---|
-| `usersByLogin` | `String login` (vd `"admin"`) | Consumer-defined principal/user snapshot nếu identity adapter có cache | Consumer `SecurityIdentityService` hoặc user repository cache theo convention này | (a) Consumer tự evict khi update user; (b) `SecPermissionService.save/update/delete*` evict `allEntries=true` khi sửa permission; (c) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true` khi sửa role; (d) TTL safety net 60s |
+| `userAuthoritiesByUsername` | `String username` (vd `"admin"`) | Authority names resolved for that username | Consumer `CurrentUserAuthorityProvider` hoặc user-role service cache theo convention này | (a) Consumer tự evict khi update user-role; (b) `SecPermissionService.save/update/delete*` evict `allEntries=true` khi sửa permission; (c) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true` khi sửa role; (d) TTL safety net 60s |
 | `sec-permission-matrix` | `String` = `new TreeSet<>(authorities).toString()` (vd `"[ROLE_ADMIN, ROLE_USER]"`) | `PermissionMatrix` (CRUD/row/attribute) | Request RBAC gọi `getMatrix()` → `cache.computeIfAbsent(key, ...)` | (a) `SecPermissionService.save/update/delete*` evict `allEntries=true`; (b) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true`; (c) TTL 3600s |
 | `com.vn.security.core.domain.*` | Entity ID | Entity object | Hibernate L2 cache (load entity qua JPA) | Hibernate tự manage |
 | `default` | — | — | Fallback, hiếm khi dùng | — |
 
-> ⚠️ **Bug-aware design**: trước v0.0.5, login flow đọc `usersByLogin` qua `@Cacheable` → nếu admin sửa role/permission nhưng cache chưa evict ⇒ login mới vẫn lấy User entity cũ ⇒ JWT mới vẫn chứa role cũ. v0.0.5 fix bằng cách: (1) evict cache trong mọi write-path role/permission, (2) TTL 60s làm safety net cho các đường đi không qua write-path (vd migration script update DB trực tiếp).
+> ⚠️ **Bug-aware design**: trước v0.0.5, login flow đọc `userAuthoritiesByUsername` qua `@Cacheable` → nếu admin sửa role/permission nhưng cache chưa evict ⇒ login mới vẫn lấy User entity cũ ⇒ JWT mới vẫn chứa role cũ. v0.0.5 fix bằng cách: (1) evict cache trong mọi write-path role/permission, (2) TTL 60s làm safety net cho các đường đi không qua write-path (vd migration script update DB trực tiếp).
 
 > ⚠️ Key của `sec-permission-matrix` **shared theo bộ role**, KHÔNG theo user. 100 user cùng role ⇒ 1 entry cache duy nhất.
 
@@ -88,7 +88,7 @@ MC sidebar trái → **Cluster → Scripting**:
 - Paste:
 
 ```javascript
-var map = hazelcast.getMap("usersByLogin");
+var map = hazelcast.getMap("userAuthoritiesByUsername");
 var keys = map.keySet().toArray();
 var out = "Total: " + map.size() + " entries\n\n";
 for (var i = 0; i < keys.length; i++) {
@@ -146,10 +146,10 @@ Bước 5. Chạy lại Script 1:
 ### Case B: Admin **gán role mới cho user X** (vd thêm `ROLE_ADMIN`)
 
 ```
-Bước 1. User X login → Script 2 (dump usersByLogin) → entry "userX" có role cũ.
+Bước 1. User X authenticated → Script 2 (dump userAuthoritiesByUsername) → entry "userX" có role cũ.
 
 Bước 2. Admin gọi API update user X.
-        → Consumer user service evict usersByLogin[user.login].
+        → Consumer user service evict userAuthoritiesByUsername[user.login].
         → Script 2: entry "userX" biến mất.
 
 Bước 3. User X (vẫn dùng JWT cũ) gọi API.
@@ -178,7 +178,7 @@ Bước 5. Verify VALUE entry mới chứa permission đúng.
 Trả lời: ai đang trong cache, role gì, được làm gì.
 
 ```javascript
-var users = hazelcast.getMap("usersByLogin");
+var users = hazelcast.getMap("userAuthoritiesByUsername");
 var matrix = hazelcast.getMap("sec-permission-matrix");
 
 var out = "";
@@ -280,7 +280,7 @@ function dump(obj, indent) {
 }
 
 // === MAIN ===
-var map = hazelcast.getMap("usersByLogin");  // ← đổi tên map ở đây
+var map = hazelcast.getMap("userAuthoritiesByUsername");  // ← đổi tên map ở đây
 var keys = map.keySet().toArray();
 var result = "Map: " + map.getName() + " (size=" + map.size() + ")\n\n";
 for (var i = 0; i < keys.length; i++) {
@@ -338,7 +338,7 @@ Output có thể bị truncate ở UI MC nếu quá dài (~vài chục KB). Map 
 
 ```javascript
 hazelcast.getMap("sec-permission-matrix").clear();
-hazelcast.getMap("usersByLogin").clear();
+hazelcast.getMap("userAuthoritiesByUsername").clear();
 "Cleared";
 ```
 
@@ -358,6 +358,6 @@ hazelcast.getMap("usersByLogin").clear();
 
 - `com.vn.security.core.config.CacheConfiguration` — Hazelcast config (cluster name, MC permissions, map config).
 - `com.vn.security.core.security.permission.RequestPermissionSnapshot` — populate `sec-permission-matrix`.
-- Consumer `SecurityIdentityService` / user repository — populate `usersByLogin` nếu dùng cache convention này.
-- Consumer user service — evict `usersByLogin` khi update user.
+- Consumer `CurrentUserAuthorityProvider` / user-role service — populate `userAuthoritiesByUsername` nếu dùng cache convention này.
+- Consumer user service — evict `userAuthoritiesByUsername` khi update user.
 - `com.vn.security.core.service.security.SecPermissionService` — evict `sec-permission-matrix` khi sửa permission.

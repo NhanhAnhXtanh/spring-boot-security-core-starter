@@ -7,7 +7,7 @@
 ## Nguyên tắc nền (đọc lại trước khi thêm entity)
 
 - **Persistence layer cho entity nghiệp vụ = `EntityManager` của starter** (gián tiếp qua `SecureDataManager` / `UnconstrainedDataManager`).
-- **`JpaRepository` đã đóng tập cho entity nghiệp vụ** — starter chỉ sở hữu repository hạ tầng RBAC như `AuthorityRepository`. Consumer được tạo repository cho user/identity store của họ khi implement `SecurityIdentityService`, nhưng mọi entity nghiệp vụ mới phải đi đường EntityManager.
+- **`JpaRepository` đã đóng tập cho entity nghiệp vụ** — starter chỉ sở hữu repository hạ tầng RBAC như `AuthorityRepository`. Consumer được tạo repository cho user/identity/auth store của họ, nhưng mọi entity nghiệp vụ mới phải đi đường EntityManager.
 - Marker để vào hệ thống quyền = annotation **`@SecuredEntity`** trên class JPA.
 
 ---
@@ -177,7 +177,7 @@ REST resource: copy theo `ProofDepartmentResource`.
 
 ```bash
 # login admin → lấy JWT
-curl -X POST http://localhost:8080/api/authenticate \
+curl -X POST http://localhost:8080/<consumer-login-endpoint> \
   -H 'Content-Type: application/json' \
   -d '{"username":"admin","password":"admin"}'
 

@@ -29,7 +29,7 @@ import com.vn.security.core.util.ResponseUtil;
  */
 @RestController
 @RequestMapping("/api/admin/sec/menu-definitions")
-@PreAuthorize("hasAuthority(\"" + AuthoritiesConstants.ADMIN + "\")")
+@PreAuthorize("@securityCoreAuthorization.hasAuthority('" + AuthoritiesConstants.ADMIN + "')")
 public class SecMenuDefinitionAdminResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(SecMenuDefinitionAdminResource.class);
