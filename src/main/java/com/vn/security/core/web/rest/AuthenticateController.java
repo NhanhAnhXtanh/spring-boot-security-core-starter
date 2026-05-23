@@ -5,7 +5,7 @@ import static com.vn.security.core.security.SecurityUtils.JWT_ALGORITHM;
 import static com.vn.security.core.security.SecurityUtils.USER_ID_CLAIM;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.vn.security.core.security.DomainUserDetailsService.UserWithId;
+import com.vn.security.core.security.SecurityPrincipal;
 import com.vn.security.core.web.rest.vm.LoginVM;
 import jakarta.validation.Valid;
 import java.security.Principal;
@@ -94,8 +94,8 @@ public class AuthenticateController {
             .expiresAt(validity)
             .subject(authentication.getName())
             .claim(AUTHORITIES_CLAIM, authorities);
-        if (authentication.getPrincipal() instanceof UserWithId user) {
-            builder.claim(USER_ID_CLAIM, user.getId());
+        if (authentication.getPrincipal() instanceof SecurityPrincipal principal && principal.getUserId() != null) {
+            builder.claim(USER_ID_CLAIM, principal.getUserId());
         }
 
         JwsHeader jwsHeader = JwsHeader.with(JWT_ALGORITHM).build();

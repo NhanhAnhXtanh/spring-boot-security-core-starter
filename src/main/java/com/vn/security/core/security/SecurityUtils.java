@@ -2,6 +2,7 @@ package com.vn.security.core.security;
 
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Stream;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -38,6 +39,8 @@ public final class SecurityUtils {
     private static String extractPrincipal(Authentication authentication) {
         if (authentication == null) {
             return null;
+        } else if (authentication.getPrincipal() instanceof SecurityPrincipal securityPrincipal) {
+            return securityPrincipal.getLogin();
         } else if (authentication.getPrincipal() instanceof UserDetails springSecurityUser) {
             return springSecurityUser.getUsername();
         } else if (authentication.getPrincipal() instanceof Jwt jwt) {
@@ -61,16 +64,76 @@ public final class SecurityUtils {
     }
 
     /**
-     * Get the Id of the current user.
+     * Get the Id of the current user as a string.
      *
      * @return the Id of the current user.
      */
+    public static Optional<String> getCurrentUserIdAsString() {
+        return getCurrentUserIdClaim().flatMap(SecurityUtils::toStringValue);
+    }
+
+    /**
+     * Get the numeric Id of the current user.
+     *
+     * @return the numeric Id of the current user.
+     */
     public static Optional<Long> getCurrentUserId() {
+        return getCurrentUserIdClaim().flatMap(SecurityUtils::toLong);
+    }
+
+    /**
+     * Get the UUID Id of the current user.
+     *
+     * @return the UUID Id of the current user.
+     */
+    public static Optional<UUID> getCurrentUserUuid() {
+        return getCurrentUserIdAsString().flatMap(SecurityUtils::toUuid);
+    }
+
+    private static Optional<Object> getCurrentUserIdClaim() {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         return Optional.ofNullable(securityContext.getAuthentication())
             .filter(authentication -> authentication.getPrincipal() instanceof ClaimAccessor)
             .map(authentication -> (ClaimAccessor) authentication.getPrincipal())
             .map(principal -> principal.getClaim(USER_ID_CLAIM));
+    }
+
+    private static Optional<String> toStringValue(Object value) {
+        if (value instanceof String string && !string.isBlank()) {
+            return Optional.of(string);
+        }
+        if (value instanceof UUID uuid) {
+            return Optional.of(uuid.toString());
+        }
+        if (value instanceof Number number) {
+            return Optional.of(number.toString());
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<Long> toLong(Object value) {
+        if (value instanceof Long longValue) {
+            return Optional.of(longValue);
+        }
+        if (value instanceof Number number) {
+            return Optional.of(number.longValue());
+        }
+        if (value instanceof String string && !string.isBlank()) {
+            try {
+                return Optional.of(Long.parseLong(string));
+            } catch (NumberFormatException ignored) {
+                return Optional.empty();
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<UUID> toUuid(String value) {
+        try {
+            return Optional.of(UUID.fromString(value));
+        } catch (IllegalArgumentException ignored) {
+            return Optional.empty();
+        }
     }
 
     /**
