@@ -139,6 +139,8 @@ security-core:
 |---|---|---|
 | [`rules/data-access.md`](rules/data-access.md) | Trước khi viết bất kỳ code đụng DB | Bắt buộc dùng `SecureDataManager` (CRUD nghiệp vụ) hoặc `UnconstrainedDataManager` (system/bootstrap/migration). **Không tạo thêm `JpaRepository`** cho entity nghiệp vụ. User entity của consumer là ngoại lệ vì consumer sở hữu identity store. |
 | [`rules/identity-integration.md`](rules/identity-integration.md) | Khi tích hợp user/login/register/account | Chuẩn consumer-owned identity: `SecurityUser<ID>` + user repository riêng + `SecurityIdentityService` + registration/account tự viết. |
+| [`rules/dynamic-authorization.md`](rules/dynamic-authorization.md) | Khi consumer tự làm login/logout/register/SSO | Chuẩn username-only auth boundary: starter resolve role động theo username, rồi áp permission/menu động. |
+| [`rules/dynamic-authorization-plan.md`](rules/dynamic-authorization-plan.md) | Khi triển khai mode username-only authorization | Kế hoạch từng phase: thêm authority provider, sửa permission/menu resolver, gỡ auth/JWT khỏi starter. |
 | [`rules/entity-onboarding.md`](rules/entity-onboarding.md) | Khi thêm entity mới hoặc refactor entity cũ | Quy trình 6 bước: tạo entity + `@SecuredEntity` → `@EntityScan` → migration → seed permission → fetch plan → service/REST. Có checklist review PR và bảng "bẫy hay gặp". |
 
 ### Cheat-sheet 30 giây

@@ -19,6 +19,8 @@ Khi một dự án khác (consumer) implement starter này, **mọi data access 
 |---|---|
 | [`rules/data-access.md`](rules/data-access.md) | **Mọi** thao tác đọc/ghi database. Phân biệt `SecureDataManager` vs `UnconstrainedDataManager`, quy ước `JpaRepository` vs `EntityManager`. |
 | [`rules/identity-integration.md`](rules/identity-integration.md) | Khi consumer tích hợp bảng user riêng, đăng ký/login/account/user-admin. Chuẩn `SecurityUser<ID>` + `SecurityIdentityService`. |
+| [`rules/dynamic-authorization.md`](rules/dynamic-authorization.md) | Khi consumer tự làm login/logout/register/SSO và starter chỉ phân quyền theo username. Chuẩn role động + permission động + menu động. |
+| [`rules/dynamic-authorization-plan.md`](rules/dynamic-authorization-plan.md) | Khi triển khai code cho mode username-only authorization. Phase-by-phase plan để gỡ auth khỏi starter. |
 | [`rules/entity-onboarding.md`](rules/entity-onboarding.md) | Khi **thêm entity mới** hoặc **refactor entity cũ** trong consumer. 6 bước bắt buộc + checklist review. |
 | [`rules/cache-debug.md`](rules/cache-debug.md) | Khi cần **xem data Hazelcast cache** (debug permission stale, verify `@CacheEvict`, kiểm tra invalidation sau khi admin sửa role). Setup MC + script mẫu + workflow debug. |
 
@@ -31,7 +33,7 @@ Khi một dự án khác (consumer) implement starter này, **mọi data access 
 1. **CRUD theo user request** → `SecureDataManager`. Không bypass.
 2. **Code hệ thống / bootstrap / job đồng bộ không qua user** → `UnconstrainedDataManager`, kèm comment lý do.
 3. **Persistence layer:** `EntityManager` (qua `SecureDataManager`) cho mọi entity nghiệp vụ. `JpaRepository` chỉ là ngoại lệ cho identity store của consumer và repository hạ tầng starter như `AuthorityRepository`.
-4. **Identity:** starter không tạo `sec_user`. Consumer tạo user entity riêng, nên extend `SecurityUser<ID>` hoặc implement `UserDetails`, và bắt buộc cung cấp `SecurityIdentityService`. Xem [`rules/identity-integration.md`](rules/identity-integration.md).
+4. **Identity/authentication:** consumer có thể tự làm toàn bộ login/logout/register/SSO. Khi dùng mode này, starter chỉ đọc `Authentication.getName()` và resolve role qua provider theo username. Xem [`rules/dynamic-authorization.md`](rules/dynamic-authorization.md).
 5. **Entity mới:** bắt buộc `@SecuredEntity` + `@EntityScan` package consumer + seed permission + fetch plan. Superclass **tuỳ chọn** — nếu consumer đã có `BaseEntity` riêng thì giữ, KHÔNG ép sang `AbstractAuditingEntity`. Xem [`rules/entity-onboarding.md`](rules/entity-onboarding.md).
 6. **Khi nghi ngờ** → chọn `SecureDataManager`. Bypass là lỗi mặc định, không phải shortcut.
 
