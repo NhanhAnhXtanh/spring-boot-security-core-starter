@@ -17,7 +17,7 @@ Reusable Spring Boot starter cung cấp sẵn JWT authentication, RBAC (role + p
 - [Rules bắt buộc cho consumer project](#rules-bắt-buộc-cho-consumer-project) ← **đọc trước khi viết code**
 - [Override bean mặc định](#override-bean-mặc-định)
 - [Tắt từng auto-config](#tắt-từng-auto-config)
-- [Quick start cho DEV (auto-seed admin)](#quick-start-cho-dev-auto-seed-admin)
+- [Quick start identity cho consumer](#quick-start-identity-cho-consumer)
 - [Seed SQL (tuỳ chọn)](#seed-sql-tuỳ-chọn)
 - [Build từ source](#build-từ-source)
 - [License](#license)
@@ -26,7 +26,7 @@ Reusable Spring Boot starter cung cấp sẵn JWT authentication, RBAC (role + p
 
 | Module | Mô tả |
 |---|---|
-| **JWT authentication** | HS512, login `/api/authenticate`, register `/api/register`, change password. (Email-based activation và reset password đã được bỏ — xem bug #001.) |
+| **JWT authentication** | HS512, login `/api/authenticate`. User lifecycle (register/account/change password/user admin) do consumer sở hữu qua user table riêng. |
 | **RBAC + ABAC** | `@SecuredEntity` + `SecuredEntityCatalog` + permission table `sec_permission` (action × target × authority × effect). |
 | **Row-level security** | Row policy evaluator áp filter trên mọi `SecureDataManager.loadList/loadOne`. |
 | **Attribute-level check** | `EntityMutation.changedAttributes` quyết định cột nào được phép set. |
@@ -34,7 +34,7 @@ Reusable Spring Boot starter cung cấp sẵn JWT authentication, RBAC (role + p
 | **Auditing** | `AbstractAuditingEntity` + `SpringSecurityAuditorAware` (createdBy/Date, lastModifiedBy/Date). |
 | **CORS / Security headers** | Cấu hình qua `security-core.cors.*`. |
 | **Cache (Hazelcast)** | Bật/tắt qua `security-core.cache.enabled`. |
-| **Liquibase migrations** | Schema `sec_*` chạy sẵn khi consumer trỏ `change-log: classpath:config/liquibase/master.xml`. |
+| **Liquibase migrations** | Schema hạ tầng security `sec_*` chạy sẵn khi consumer trỏ `change-log: classpath:config/liquibase/master.xml`. Starter không tạo bảng user mặc định. |
 
 ## Cài đặt
 
@@ -119,9 +119,7 @@ security-core:
 | `security-core.fetch-plans.config` | `classpath:fetch-plans.yml` | File định nghĩa fetch plans. |
 | `security-core.liquibase.async-start` | `false` | Bật Liquibase chạy async. |
 | `security-core.cache.enabled` | `true` | Bật/tắt Hazelcast cache. |
-| `security-core.seed.enabled` | `false` | Tạo user `admin` mặc định khi boot. **CHỈ DÙNG DEV.** |
-| `security-core.seed.username` | `admin` | Username cho seed user. |
-| `security-core.seed.password` | `admin` | Password cho seed user. |
+| `security-core.seed.enabled` | `false` | Không còn seed user mặc định. Consumer tự seed user trong migration/service của app. |
 
 ## REST endpoints có sẵn
 
@@ -129,16 +127,9 @@ security-core:
 |---|---|---|
 | POST | `/api/authenticate` | Login → trả JWT. |
 | GET | `/api/authenticate` | Check user hiện tại có authenticated không. |
-| POST | `/api/register` | Đăng ký account (active ngay, không cần xác nhận qua email). |
-| GET | `/api/account` | Lấy thông tin user hiện tại. |
-| POST | `/api/account` | Cập nhật thông tin cá nhân (firstName, lastName, langKey, imageUrl). |
-| POST | `/api/account/change-password` | Đổi mật khẩu hiện tại. |
+| Consumer-owned | `/api/register`, `/api/account`, `/api/account/change-password`, `/api/admin/users/**` | Consumer tự implement vì consumer sở hữu user table/schema/business rule. |
 | `*` | `/api/admin/**` | Yêu cầu authority `ROLE_ADMIN`. |
 | `*` | `/api/**` | Yêu cầu authenticated. |
-
-> Email-driven endpoints (`/api/activate`, `/api/account/reset-password/init`,
-> `/api/account/reset-password/finish`) đã bị bỏ cùng với email feature (bug #001).
-> Reset password chỉ làm thủ công qua admin endpoint `PUT /api/admin/users/{login}`.
 
 ## Rules bắt buộc cho consumer project
 
@@ -147,6 +138,7 @@ security-core:
 | Tài liệu | Khi nào đọc | Tóm tắt |
 |---|---|---|
 | [`rules/data-access.md`](rules/data-access.md) | Trước khi viết bất kỳ code đụng DB | Bắt buộc dùng `SecureDataManager` (CRUD nghiệp vụ) hoặc `UnconstrainedDataManager` (system/bootstrap/migration). **Không tạo thêm `JpaRepository`** cho entity nghiệp vụ. User entity của consumer là ngoại lệ vì consumer sở hữu identity store. |
+| [`rules/identity-integration.md`](rules/identity-integration.md) | Khi tích hợp user/login/register/account | Chuẩn consumer-owned identity: `SecurityUser<ID>` + user repository riêng + `SecurityIdentityService` + registration/account tự viết. |
 | [`rules/entity-onboarding.md`](rules/entity-onboarding.md) | Khi thêm entity mới hoặc refactor entity cũ | Quy trình 6 bước: tạo entity + `@SecuredEntity` → `@EntityScan` → migration → seed permission → fetch plan → service/REST. Có checklist review PR và bảng "bẫy hay gặp". |
 
 ### Cheat-sheet 30 giây
@@ -205,41 +197,69 @@ spring:
 
 Bỏ Hazelcast / Liquibase ra khỏi classpath cũng tự khiến config tương ứng không kích hoạt (nhờ `@ConditionalOnClass`).
 
-## Quick start cho DEV (auto-seed admin)
+## Quick start identity cho consumer
 
-Bật 1 dòng trong `application.yml` để starter tự tạo user `admin/admin` khi boot:
+Starter không seed user và không tạo `sec_user`. Consumer cần làm 4 việc:
 
-```yaml
-security-core:
-  seed:
-    enabled: true
+1. Tạo entity user riêng, ví dụ `AppUser extends SecurityUser<UUID>`.
+2. Tạo migration cho `app_user` và bảng join role, ví dụ `app_user_authority`.
+3. Tạo `AppUserRepository` và implement `SecurityIdentityService`.
+4. Tự viết register/account/change-password/user-admin theo business của app.
+
+Ví dụ entity:
+
+```java
+@Entity
+@Table(name = "app_user")
+public class AppUser extends SecurityUser<UUID> {
+    @Id
+    private UUID id;
+
+    @Override
+    public UUID getId() {
+        return id;
+    }
+}
 ```
 
-Sau khi boot:
+Ví dụ login adapter:
+
+```java
+@Service
+public class AppSecurityIdentityService implements SecurityIdentityService {
+    private final AppUserRepository users;
+
+    public SecurityPrincipal loadByLogin(String login) {
+        AppUser user = users.findOneWithAuthoritiesByLogin(login.toLowerCase(Locale.ENGLISH))
+            .orElseThrow(() -> new UsernameNotFoundException(login));
+
+        String userId = user.getId().toString();
+        return new DefaultSecurityPrincipal(
+            userId,
+            user.getUsername(),
+            user.getPassword(),
+            user.isEnabled(),
+            user.getAuthorities(),
+            Map.of(SecurityUtils.USER_ID_CLAIM, userId)
+        );
+    }
+}
+```
+
+Sau khi consumer seed/tạo user, login qua endpoint starter:
+
 ```bash
 curl -X POST http://localhost:8080/api/authenticate \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin","rememberMe":false}'
 ```
 
-→ Trả JWT ngay.
-
-> **⚠ KHÔNG BẬT TRÊN PRODUCTION.** Default credentials là CVE category. Production phải để `enabled: false` (mặc định) và seed user thủ công qua migration.
-
-Có thể đổi mật khẩu mặc định:
-```yaml
-security-core:
-  seed:
-    enabled: true
-    username: superadmin
-    password: my-strong-dev-password
-```
+Xem chi tiết trong [`rules/identity-integration.md`](rules/identity-integration.md).
 
 ## Seed SQL (tuỳ chọn)
 
-Starter có sẵn 2 file seed ở `classpath:db/seed/`:
-- `seed-admin.sql` — tạo admin user.
-- `seed-permissions.sql` — seed permission/role baseline.
+Starter có sẵn file seed permission/role baseline:
+- `seed-permissions.sql`
 
 Tham chiếu từ Liquibase changelog của consumer nếu muốn dùng:
 
