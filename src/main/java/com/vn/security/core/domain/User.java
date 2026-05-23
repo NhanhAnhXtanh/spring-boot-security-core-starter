@@ -17,25 +17,18 @@ import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 /**
- * A user.
+ * Base mapped superclass for consumer-owned users.
  *
- * <p>Email và activation/reset-key flow đã được bỏ khỏi starter (bug #001).
- * Account được tạo ra ở trạng thái {@code activated=true} ngay — admin tự quyết định
- * có muốn flip {@code activated=false} thủ công hay không.</p>
+ * <p>The starter does not provide a concrete user table. Consumer applications
+ * should create their own {@code @Entity}, choose the id type/table name, and
+ * extend this class when they want the starter's standard user fields.</p>
  */
-@Entity
-@Table(name = "sec_user")
+@MappedSuperclass
 @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
-public class User extends AbstractAuditingEntity<Long> implements Serializable {
+public abstract class User<ID> extends AbstractAuditingEntity<ID> implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sequenceGenerator")
-    @SequenceGenerator(name = "sequenceGenerator")
-    @Column(name = "id")
-    private Long id;
 
     @NotNull
     @Pattern(regexp = Constants.LOGIN_REGEX)
@@ -71,22 +64,9 @@ public class User extends AbstractAuditingEntity<Long> implements Serializable {
 
     @JsonIgnore
     @ManyToMany
-    @JoinTable(
-        name = "sec_user_authority",
-        joinColumns = { @JoinColumn(name = "user_id", referencedColumnName = "id") },
-        inverseJoinColumns = { @JoinColumn(name = "authority_name", referencedColumnName = "name") }
-    )
     @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
     @BatchSize(size = 20)
     private Set<Authority> authorities = new HashSet<>();
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public String getLogin() {
         return login;
@@ -158,10 +138,10 @@ public class User extends AbstractAuditingEntity<Long> implements Serializable {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof User)) {
+        if (!(o instanceof User<?>)) {
             return false;
         }
-        return id != null && id.equals(((User) o).id);
+        return getId() != null && getId().equals(((User<?>) o).getId());
     }
 
     @Override

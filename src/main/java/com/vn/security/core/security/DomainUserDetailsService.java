@@ -9,9 +9,8 @@ import org.springframework.stereotype.Component;
 /**
  * Authenticate a user through the configured identity adapter.
  *
- * <p>The default adapter is backed by the starter's {@code sec_user} table.
- * Consumer applications can provide their own {@link SecurityIdentityService}
- * to use an existing user table while keeping the same security pipeline.
+ * <p>Consumer applications must provide a {@link SecurityIdentityService}
+ * that loads their user table and maps it to a {@link SecurityPrincipal}.
  */
 @Component("userDetailsService")
 public class DomainUserDetailsService implements UserDetailsService {

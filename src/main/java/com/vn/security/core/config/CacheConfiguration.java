@@ -3,7 +3,7 @@ package com.vn.security.core.config;
 import com.hazelcast.config.*;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.vn.security.core.repository.UserRepository;
+import com.vn.security.core.security.UserCacheNames;
 import com.vn.security.core.security.permission.RequestPermissionSnapshot;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -28,11 +28,8 @@ public class CacheConfiguration {
     private static final int DEFAULT_TTL_SECONDS = 3600;
     private static final int DEFAULT_BACKUP_COUNT = 1;
     /**
-     * Short TTL safety net for {@code usersByLogin}. Eviction on the write path
-     * ({@code UserService.clearUserCaches}, {@code SecPermissionService}, {@code SecRoleAdminResource})
-     * is the primary freshness mechanism; this TTL caps staleness when write-path eviction is missed
-     * (e.g. direct DB updates, migration scripts, or future endpoints that touch authorities without
-     * going through the eviction seam).
+     * Short TTL safety net for {@code usersByLogin}. Consumer identity adapters
+     * can use this cache name and rely on starter permission/role writes to evict it.
      */
     private static final int USERS_BY_LOGIN_TTL_SECONDS = 60;
 
@@ -102,7 +99,7 @@ public class CacheConfiguration {
     }
 
     private MapConfig initializeUsersByLoginMapConfig() {
-        MapConfig mapConfig = new MapConfig(UserRepository.USERS_BY_LOGIN_CACHE);
+        MapConfig mapConfig = new MapConfig(UserCacheNames.USERS_BY_LOGIN);
         mapConfig.setTimeToLiveSeconds(USERS_BY_LOGIN_TTL_SECONDS);
         mapConfig.setBackupCount(DEFAULT_BACKUP_COUNT);
         mapConfig.getEvictionConfig().setEvictionPolicy(EvictionPolicy.LRU);
