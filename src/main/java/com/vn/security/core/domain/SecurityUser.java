@@ -26,7 +26,7 @@ import org.springframework.security.core.userdetails.UserDetails;
  */
 @MappedSuperclass
 @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
-public abstract class User<ID> extends AbstractAuditingEntity<ID> implements UserDetails, Serializable {
+public abstract class SecurityUser<ID> extends AbstractAuditingEntity<ID> implements UserDetails, Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -164,10 +164,10 @@ public abstract class User<ID> extends AbstractAuditingEntity<ID> implements Use
         if (this == o) {
             return true;
         }
-        if (!(o instanceof User<?>)) {
+        if (!(o instanceof SecurityUser<?>)) {
             return false;
         }
-        return getId() != null && getId().equals(((User<?>) o).getId());
+        return getId() != null && getId().equals(((SecurityUser<?>) o).getId());
     }
 
     @Override
@@ -179,7 +179,7 @@ public abstract class User<ID> extends AbstractAuditingEntity<ID> implements Use
     // prettier-ignore
     @Override
     public String toString() {
-        return "User{" +
+        return "SecurityUser{" +
             "login='" + login + '\'' +
             ", firstName='" + firstName + '\'' +
             ", lastName='" + lastName + '\'' +

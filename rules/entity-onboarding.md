@@ -7,7 +7,7 @@
 ## Nguyên tắc nền (đọc lại trước khi thêm entity)
 
 - **Persistence layer cho entity nghiệp vụ = `EntityManager` của starter** (gián tiếp qua `SecureDataManager` / `UnconstrainedDataManager`).
-- **`JpaRepository` đã đóng tập** — chỉ `UserRepository` và `AuthorityRepository` (do starter sở hữu). Consumer **không tạo `JpaRepository` mới**. Mọi entity mới phải đi đường EntityManager.
+- **`JpaRepository` đã đóng tập cho entity nghiệp vụ** — starter chỉ sở hữu repository hạ tầng RBAC như `AuthorityRepository`. Consumer được tạo repository cho user/identity store của họ khi implement `SecurityIdentityService`, nhưng mọi entity nghiệp vụ mới phải đi đường EntityManager.
 - Marker để vào hệ thống quyền = annotation **`@SecuredEntity`** trên class JPA.
 
 ---
@@ -238,7 +238,7 @@ Nếu 403 mọi nơi → check Bước 4 (seed permission). Nếu "entity not re
 ## D. Tham chiếu code mẫu
 
 - Entity gốc (demo proof entities — kèm prefix `Proof` để consumer không bị đụng tên): `com.vn.security.core.domain.ProofDepartment` / `ProofEmployee` / `ProofOrganization` (không extend AbstractAuditing) — pattern phổ biến.
-- Entity có audit: `com.vn.security.core.domain.User` (extend `AbstractAuditingEntity<Long>`).
+- Base user tùy chọn: `com.vn.security.core.domain.SecurityUser<ID>` (mapped superclass, implements Spring Security `UserDetails`; consumer tự tạo entity/table/id).
 - Service: `com.vn.security.core.service.ProofDepartmentService`.
 - REST: `com.vn.security.core.web.rest.ProofDepartmentResource`.
 - Catalog scanner: `com.vn.security.core.security.catalog.MetamodelSecuredEntityCatalog`.
@@ -283,7 +283,7 @@ Bước 5 nói "Phải có entry trong `fetch-plans.yml`". Chính xác:
 
 ### E.3. `security-core.cache.enabled=false` không thật sự skip cache
 
-Set → boot crash `Parameter 3 of constructor in UserService required a bean of type 'org.springframework.cache.CacheManager'`. Workaround: giữ `true` mặc định. Bug đã log starter side.
+Set → trước đây từng boot crash vì user-management mặc định phụ thuộc `CacheManager`. User-management mặc định đã bị gỡ; nếu gặp lỗi cache mới, kiểm tra bean `CacheManager` và cấu hình `security-core.cache.enabled`.
 
 ### E.4. `Pageable.unpaged()` → HTTP 500
 

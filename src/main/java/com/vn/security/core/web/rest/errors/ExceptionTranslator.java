@@ -82,9 +82,6 @@ public class ExceptionTranslator extends ResponseEntityExceptionHandler {
     }
 
     private ProblemDetailWithCause getProblemDetailWithCause(Throwable ex) {
-        if (ex instanceof com.vn.security.core.service.UsernameAlreadyUsedException) {
-            return (ProblemDetailWithCause) new LoginAlreadyUsedException().getBody();
-        }
         if (ex instanceof com.vn.security.core.service.InvalidPasswordException) {
             return (ProblemDetailWithCause) new InvalidPasswordException().getBody();
         }

@@ -22,7 +22,7 @@ Cache thực tế starter populate vào Hazelcast:
 
 | Map name | Key | Value | Populate khi | Evict khi |
 |---|---|---|---|---|
-| `usersByLogin` | `String login` (vd `"admin"`) | `User` entity (kèm authorities) | `findOneWithAuthoritiesByLogin(login)` được gọi (login flow) | (a) `UserService.clearUserCaches(user)` evict theo `user.getLogin()` khi update user; (b) `SecPermissionService.save/update/delete*` evict `allEntries=true` khi sửa permission; (c) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true` khi sửa role; (d) TTL safety net 60s |
+| `usersByLogin` | `String login` (vd `"admin"`) | Consumer-defined principal/user snapshot nếu identity adapter có cache | Consumer `SecurityIdentityService` hoặc user repository cache theo convention này | (a) Consumer tự evict khi update user; (b) `SecPermissionService.save/update/delete*` evict `allEntries=true` khi sửa permission; (c) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true` khi sửa role; (d) TTL safety net 60s |
 | `sec-permission-matrix` | `String` = `new TreeSet<>(authorities).toString()` (vd `"[ROLE_ADMIN, ROLE_USER]"`) | `PermissionMatrix` (CRUD/row/attribute) | Request RBAC gọi `getMatrix()` → `cache.computeIfAbsent(key, ...)` | (a) `SecPermissionService.save/update/delete*` evict `allEntries=true`; (b) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true`; (c) TTL 3600s |
 | `com.vn.security.core.domain.*` | Entity ID | Entity object | Hibernate L2 cache (load entity qua JPA) | Hibernate tự manage |
 | `default` | — | — | Fallback, hiếm khi dùng | — |
@@ -115,7 +115,7 @@ Lấy danh sách login từ DB:
 ```powershell
 docker run --rm -e PGPASSWORD=123456 postgres:17 `
   psql -h host.docker.internal -U postgres -d db_react_springboot `
-  -c "SELECT login FROM sec_user;"
+  -c "SELECT login FROM <consumer_user_table>;"
 ```
 
 ---
@@ -149,7 +149,7 @@ Bước 5. Chạy lại Script 1:
 Bước 1. User X login → Script 2 (dump usersByLogin) → entry "userX" có role cũ.
 
 Bước 2. Admin gọi API update user X.
-        → UserService.clearUserCaches(user) evict usersByLogin[user.login].
+        → Consumer user service evict usersByLogin[user.login].
         → Script 2: entry "userX" biến mất.
 
 Bước 3. User X (vẫn dùng JWT cũ) gọi API.
@@ -358,6 +358,6 @@ hazelcast.getMap("usersByLogin").clear();
 
 - `com.vn.security.core.config.CacheConfiguration` — Hazelcast config (cluster name, MC permissions, map config).
 - `com.vn.security.core.security.permission.RequestPermissionSnapshot` — populate `sec-permission-matrix`.
-- `com.vn.security.core.repository.UserRepository#findOneWithAuthoritiesByLogin` — populate `usersByLogin`.
-- `com.vn.security.core.service.UserService#clearUserCaches` — evict `usersByLogin` khi update user.
+- Consumer `SecurityIdentityService` / user repository — populate `usersByLogin` nếu dùng cache convention này.
+- Consumer user service — evict `usersByLogin` khi update user.
 - `com.vn.security.core.service.security.SecPermissionService` — evict `sec-permission-matrix` khi sửa permission.
