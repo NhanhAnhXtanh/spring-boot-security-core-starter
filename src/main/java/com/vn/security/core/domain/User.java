@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.springframework.security.core.userdetails.UserDetails;
 
 /**
  * Base mapped superclass for consumer-owned users.
@@ -25,7 +26,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
  */
 @MappedSuperclass
 @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
-public abstract class User<ID> extends AbstractAuditingEntity<ID> implements Serializable {
+public abstract class User<ID> extends AbstractAuditingEntity<ID> implements UserDetails, Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -69,6 +70,11 @@ public abstract class User<ID> extends AbstractAuditingEntity<ID> implements Ser
     private Set<Authority> authorities = new HashSet<>();
 
     public String getLogin() {
+        return login;
+    }
+
+    @Override
+    public String getUsername() {
         return login;
     }
 
@@ -131,6 +137,26 @@ public abstract class User<ID> extends AbstractAuditingEntity<ID> implements Ser
 
     public void setAuthorities(Set<Authority> authorities) {
         this.authorities = authorities;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return activated;
     }
 
     @Override
