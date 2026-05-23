@@ -16,25 +16,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 
 /**
- * Request-scoped permission snapshot that caches authority validation and permission
+ * Request-scoped permission snapshot that caches authority resolution and permission
  * matrix construction once per HTTP request, and shares a cross-request PermissionMatrix
- * cache in Hazelcast keyed by the user's JWT authority-name set.
+ * cache in Hazelcast keyed by the current user's resolved authority-name set.
  *
  * <p>This bean is active only within an HTTP request context. Callers outside a request
  * (batch jobs, tests, non-web contexts) must check {@link #isRequestScopeActive()} and
  * fall back to direct store queries.
- *
- * <p>Per locked decisions D-01 through D-06:
- * <ul>
- *   <li>JWT authority names are trusted directly with no {@code sec_authority} DB lookup (D-05, D-06).
- *       An authority deleted from {@code sec_authority} takes effect when the user's JWT expires —
- *       which is the accepted revocation bound for this application.</li>
- *   <li>The {@link PermissionMatrix} is shared across requests via Hazelcast, keyed by the sorted
- *       authority-name set (D-01, D-04).</li>
- *   <li>The shared cache must be evicted on every {@code SecPermission} create, update, or delete
- *       so permission changes take effect within the next HTTP request (D-02, D-03). The Hazelcast
- *       map TTL is a non-semantic safety ceiling only — correctness comes from write-path eviction.</li>
- * </ul>
  */
 @Component
 @Scope(value = "request", proxyMode = ScopedProxyMode.TARGET_CLASS)
@@ -72,8 +60,7 @@ public class RequestPermissionSnapshot {
     }
 
     /**
-     * Returns the current user's authority names for this request, taken directly from the JWT.
-     * No {@code sec_authority} DB validation is performed per D-05 and D-06.
+     * Returns the current user's resolved authority names for this request.
      * Returns the cached result on subsequent calls within the same request.
      */
     public Collection<String> getAuthorities() {
@@ -86,7 +73,7 @@ public class RequestPermissionSnapshot {
     /**
      * Returns the permission matrix for the current request.
      *
-     * <p>On first call, derives a deterministic cache key from the sorted JWT authority names,
+     * <p>On first call, derives a deterministic cache key from the sorted authority names,
      * checks the shared Hazelcast cache, and only queries the DB if no cached entry exists.
      * Returns the same instance on subsequent calls within the same request.
      */
@@ -105,9 +92,7 @@ public class RequestPermissionSnapshot {
     }
 
     /**
-     * Resolves the current user's JWT authority names directly from the security context.
-     * Per D-05 and D-06, no DB validation is performed; the token is already signature-verified
-     * by Spring Security's filter chain before this method is called.
+     * Resolves the current user's authority names from the security context.
      */
     private Collection<String> loadAuthorities() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

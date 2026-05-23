@@ -43,7 +43,7 @@ public final class SecurityUtils {
         } else if (authentication.getPrincipal() instanceof String s) {
             return s;
         }
-        return null;
+        return authentication.getName();
     }
 
     /**
