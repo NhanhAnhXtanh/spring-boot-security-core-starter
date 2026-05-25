@@ -98,6 +98,11 @@ public class CacheConfiguration {
         return mapConfig;
     }
 
+    // Verified against hazelcast-spring 5.5.0 bytecode: HazelcastCacheManager.getCache(name)
+    // wraps hazelcastInstance.getMap(name), and HazelcastCache.clear()/evict() delegate to
+    // IMap.clear()/remove(). So @CacheEvict("userAuthoritiesByUsername") on admin write paths
+    // and raw IMap access in DefaultCurrentUserAuthorityResolver / UserAuthorityCacheService
+    // operate on the same underlying map — eviction is consistent across both call styles.
     private MapConfig initializeUserAuthoritiesMapConfig() {
         MapConfig mapConfig = new MapConfig(AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME);
         mapConfig.setTimeToLiveSeconds(USER_AUTHORITIES_TTL_SECONDS);
