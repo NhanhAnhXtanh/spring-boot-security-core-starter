@@ -176,10 +176,62 @@ Tên cache hiện có:
 
 Eviction bắt buộc:
 
-- Admin sửa permission -> clear `sec-permission-matrix`, menu cache.
-- Admin sửa role definition -> clear `sec-permission-matrix`, menu cache, authority cache nếu role names/display/type ảnh hưởng UI.
-- Consumer sửa user-role assignment -> evict authority cache theo username hoặc all entries.
-- Consumer disable user -> evict authority cache theo username.
+- Admin sửa permission -> clear `sec-permission-matrix`, menu cache. **Starter đã làm** trong `SecPermissionService`.
+- Admin sửa role definition -> clear `sec-permission-matrix`, menu cache, authority cache. **Starter đã làm** trong `SecRoleAdminResource`.
+- Consumer sửa user-role assignment -> evict authority cache theo username. **Consumer phải tự gọi** `UserAuthorityCacheService.evict(username)`.
+- Consumer disable user -> evict authority cache theo username. **Consumer phải tự gọi** `UserAuthorityCacheService.evict(username)`.
+- Consumer logout (nếu policy là "đổi user thì cache phải sạch") -> `UserAuthorityCacheService.evict(username)`. Có thể skip nếu policy là "cache xuyên session cho cùng username".
+- Bulk remap (xoá role khỏi nhiều user, đổi group mapping toàn hệ thống) -> `UserAuthorityCacheService.evictAll()`.
+
+API tham khảo:
+
+```java
+@Component
+public class AppLogoutHandler implements LogoutSuccessHandler {
+
+    private final UserAuthorityCacheService authorityCache;
+
+    @Override
+    public void onLogoutSuccess(HttpServletRequest req, HttpServletResponse res, Authentication auth) {
+        if (auth != null) {
+            authorityCache.evict(auth.getName());
+        }
+    }
+}
+
+@Service
+public class AppUserRoleService {
+
+    private final UserAuthorityCacheService authorityCache;
+
+    @Transactional
+    public void assignRole(String username, String role) {
+        appUserRoleRepository.insert(username, role);
+        authorityCache.evict(username);
+    }
+
+    @Transactional
+    public void disableUser(String username) {
+        appUserRepository.disable(username);
+        authorityCache.evict(username);
+    }
+}
+```
+
+Optional pre-load on login (tiết kiệm provider call ở request đầu sau login):
+
+```java
+@Component
+public class AppAuthSuccessHandler implements AuthenticationSuccessHandler {
+
+    private final UserAuthorityCacheService authorityCache;
+
+    @Override
+    public void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse res, Authentication auth) {
+        authorityCache.warmUp(auth.getName());
+    }
+}
+```
 
 ---
 
@@ -257,6 +309,7 @@ Starter có thể cung cấp tùy chọn:
 
 - `SecurityUser<ID>` mapped superclass implements `UserDetails`
 - `CurrentUserAuthorityProvider` SPI
+- `UserAuthorityCacheService` helper để consumer evict/warmUp cache theo username
 - dynamic permission/menu services
 - security context bridge đọc username/authorities
 
@@ -270,7 +323,9 @@ Starter có thể cung cấp tùy chọn:
 - [ ] Menu service dùng cùng authority resolver.
 - [ ] Cache authority theo username nếu provider query DB/SSO.
 - [ ] Permission/role write path evict permission matrix + menu cache.
-- [ ] Consumer user-role write path evict authority cache.
+- [ ] Consumer user-role write path gọi `UserAuthorityCacheService.evict(username)`.
+- [ ] Consumer logout handler gọi `UserAuthorityCacheService.evict(username)` (nếu áp dụng policy đó).
+- [ ] Consumer disable-user flow gọi `UserAuthorityCacheService.evict(username)`.
 - [ ] Nếu cần force login, thêm auth version/epoch và check mỗi request.
 - [ ] Gỡ hoặc optional hóa authentication endpoints/config của starter.
 - [ ] README ghi rõ consumer sở hữu login/logout/register/SSO.
