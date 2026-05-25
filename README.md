@@ -53,7 +53,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.vn.security.core:security-core:0.0.3'
+    implementation 'com.vn.security.core:security-core:0.1.0'
 }
 ```
 
@@ -63,7 +63,7 @@ dependencies {
 <dependency>
     <groupId>com.vn.security.core</groupId>
     <artifactId>security-core</artifactId>
-    <version>0.0.3</version>
+    <version>0.1.0</version>
 </dependency>
 ```
 
@@ -122,7 +122,8 @@ security-core:
 | Tài liệu | Khi nào đọc | Tóm tắt |
 |---|---|---|
 | [`rules/data-access.md`](rules/data-access.md) | Trước khi viết bất kỳ code đụng DB | Bắt buộc dùng `SecureDataManager` (CRUD nghiệp vụ) hoặc `UnconstrainedDataManager` (system/bootstrap/migration). **Không tạo thêm `JpaRepository`** cho entity nghiệp vụ. User entity của consumer là ngoại lệ vì consumer sở hữu identity store. |
-| [`rules/dynamic-authorization.md`](rules/dynamic-authorization.md) | Khi consumer tự làm login/logout/register/SSO | Chuẩn username-only auth boundary: starter resolve role động theo username, rồi áp permission/menu động. |
+| [`rules/dynamic-authorization.md`](rules/dynamic-authorization.md) | Khi consumer tự làm login/logout/register/SSO | Chuẩn username-only auth boundary: starter resolve role động theo username, áp permission/menu động, 4 call-site bắt buộc cho cache eviction. |
+| [`rules/consumer-auth-integration.md`](rules/consumer-auth-integration.md) | Khi wire authentication ở app consumer | `SecurityFilterChain` mẫu (JWT stateless / session / OAuth2), login/logout/register/change-password/forgot-password/refresh endpoint, JWT claim convention với `SecurityUtils`, production checklist. |
 | [`rules/dynamic-authorization-plan.md`](rules/dynamic-authorization-plan.md) | Khi triển khai mode username-only authorization | Kế hoạch từng phase: thêm authority provider, sửa permission/menu resolver, gỡ auth/JWT khỏi starter. |
 | [`rules/entity-onboarding.md`](rules/entity-onboarding.md) | Khi thêm entity mới hoặc refactor entity cũ | Quy trình 6 bước: tạo entity + `@SecuredEntity` → `@EntityScan` → migration → seed permission → fetch plan → service/REST. Có checklist review PR và bảng "bẫy hay gặp". |
 
