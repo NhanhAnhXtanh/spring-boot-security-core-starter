@@ -61,6 +61,10 @@ public final class SecurityUtils {
     /**
      * Get the Id of the current user as a string.
      *
+     * <p>Reads the {@value #USER_ID_CLAIM} claim from the authentication principal when it
+     * implements {@link ClaimAccessor} (e.g. a JWT). The starter does not issue tokens — this
+     * claim is consumer-provided. Returns empty if the consumer auth layer does not populate it.
+     *
      * @return the Id of the current user.
      */
     public static Optional<String> getCurrentUserIdAsString() {
@@ -70,6 +74,9 @@ public final class SecurityUtils {
     /**
      * Get the numeric Id of the current user.
      *
+     * <p>See {@link #getCurrentUserIdAsString()} — the {@value #USER_ID_CLAIM} claim is
+     * consumer-provided.
+     *
      * @return the numeric Id of the current user.
      */
     public static Optional<Long> getCurrentUserId() {
@@ -78,6 +85,9 @@ public final class SecurityUtils {
 
     /**
      * Get the UUID Id of the current user.
+     *
+     * <p>See {@link #getCurrentUserIdAsString()} — the {@value #USER_ID_CLAIM} claim is
+     * consumer-provided.
      *
      * @return the UUID Id of the current user.
      */

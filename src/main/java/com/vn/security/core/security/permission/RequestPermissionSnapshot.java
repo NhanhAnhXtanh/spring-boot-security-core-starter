@@ -113,10 +113,11 @@ public class RequestPermissionSnapshot {
 
     /**
      * Derives a deterministic, order-independent cache key from the given authority names.
-     * Uses a sorted set so that {@code {ROLE_A, ROLE_B}} and {@code {ROLE_B, ROLE_A}} map to
-     * the same cache entry.
+     * Uses an explicit {@code |}-join over a sorted set so the key format does not depend on
+     * {@link java.util.AbstractCollection#toString()} (which is not part of the JDK contract)
+     * and so that {@code {ROLE_A, ROLE_B}} and {@code {ROLE_B, ROLE_A}} map to the same entry.
      */
     static String toCacheKey(Collection<String> authorities) {
-        return new TreeSet<>(authorities).toString();
+        return String.join("|", new TreeSet<>(authorities));
     }
 }

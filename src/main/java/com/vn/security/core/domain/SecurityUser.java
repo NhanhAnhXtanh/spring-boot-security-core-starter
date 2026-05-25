@@ -8,13 +8,13 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
-import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 /**
@@ -23,6 +23,12 @@ import org.springframework.security.core.userdetails.UserDetails;
  * <p>The starter does not provide a concrete user table. Consumer applications
  * should create their own {@code @Entity}, choose the id type/table name, and
  * extend this class when they want the starter's standard user fields.</p>
+ *
+ * <p>User-role assignment is owned by the consumer (see {@code rules/dynamic-authorization.md}).
+ * The starter resolves authorities through {@link com.vn.security.core.security.CurrentUserAuthorityProvider}
+ * keyed by username, not by traversing this entity, so this superclass intentionally does not
+ * declare any relationship to {@link Authority}. {@link #getAuthorities()} returns empty;
+ * authorization at request time goes through the resolver.</p>
  */
 @MappedSuperclass
 @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
@@ -62,12 +68,6 @@ public abstract class SecurityUser<ID> extends AbstractAuditingEntity<ID> implem
     @Size(max = 256)
     @Column(name = "image_url", length = 256)
     private String imageUrl;
-
-    @JsonIgnore
-    @ManyToMany
-    @Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE)
-    @BatchSize(size = 20)
-    private Set<Authority> authorities = new HashSet<>();
 
     public String getLogin() {
         return login;
@@ -131,12 +131,9 @@ public abstract class SecurityUser<ID> extends AbstractAuditingEntity<ID> implem
         this.langKey = langKey;
     }
 
-    public Set<Authority> getAuthorities() {
-        return authorities;
-    }
-
-    public void setAuthorities(Set<Authority> authorities) {
-        this.authorities = authorities;
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return List.of();
     }
 
     @Override
