@@ -22,12 +22,14 @@ Cache thực tế starter populate vào Hazelcast:
 
 | Map name | Key | Value | Populate khi | Evict khi |
 |---|---|---|---|---|
-| `userAuthoritiesByUsername` | `String username` (vd `"admin"`) | Authority names resolved for that username | Consumer `CurrentUserAuthorityProvider` hoặc user-role service cache theo convention này | (a) Consumer tự evict khi update user-role; (b) `SecPermissionService.save/update/delete*` evict `allEntries=true` khi sửa permission; (c) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true` khi sửa role; (d) TTL safety net 60s |
-| `sec-permission-matrix` | `String` = `String.join("|", new TreeSet<>(authorities))` (vd `"ROLE_ADMIN|ROLE_USER"`) | `PermissionMatrix` (CRUD/row/attribute) | Request RBAC gọi `getMatrix()` → `cache.computeIfAbsent(key, ...)` | (a) `SecPermissionService.save/update/delete*` evict `allEntries=true`; (b) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true`; (c) TTL 3600s |
-| `com.vn.security.core.domain.*` | Entity ID | Entity object | Hibernate L2 cache (load entity qua JPA) | Hibernate tự manage |
+| `userAuthoritiesByUsername` | `String username` (vd `"admin"`) | `Collection<String>` authority names resolved cho user đó | Consumer `CurrentUserAuthorityProvider` hoặc starter `DefaultCurrentUserAuthorityResolver` resolve khi cache miss | (a) Consumer gọi `UserAuthorityCacheService.evict(username)` khi logout / update user-role / disable user; (b) `SecPermissionService.save/update/delete*` gọi `evictByAuthority(authorityName)` — chỉ evict user có authority đó; (c) `SecRoleAdminResource` PUT/DELETE gọi `evictByAuthority(name)`; (d) LRU + USED_HEAP_SIZE khi heap đầy. **KHÔNG có TTL** — entry sống đến khi explicit evict. |
+| `sec-permission-matrix` | `String` = `String.join("|", new TreeSet<>(authorities))` (vd `"ROLE_ADMIN|ROLE_USER"`) | `PermissionMatrix` (CRUD/row/attribute) | Request RBAC gọi `getMatrix()` → `cache.computeIfAbsent(key, ...)` | (a) `SecPermissionService.save/update/delete*` gọi `evictByAuthority(authorityName)` — chỉ evict matrix key chứa authority đó; (b) `SecRoleAdminResource` PUT/DELETE gọi `evictByAuthority(name)`; (c) LRU + USED_HEAP_SIZE khi heap đầy. **KHÔNG có TTL.** Logout user KHÔNG touch matrix vì matrix shared theo bộ role. |
+| `com.vn.security.core.domain.*` | Entity ID | Entity object | Hibernate L2 cache (load entity qua JPA) | Hibernate tự manage, TTL 3600s |
 | `default` | — | — | Fallback, hiếm khi dùng | — |
 
-> ⚠️ **Bug-aware design**: trước v0.0.5, login flow đọc `userAuthoritiesByUsername` qua `@Cacheable` → nếu admin sửa role/permission nhưng cache chưa evict ⇒ login mới vẫn lấy User entity cũ ⇒ JWT mới vẫn chứa role cũ. v0.0.5 fix bằng cách: (1) evict cache trong mọi write-path role/permission, (2) TTL 60s làm safety net cho các đường đi không qua write-path (vd migration script update DB trực tiếp).
+> ⚠️ **Lịch sử evolution**:
+> - v0.0.5: thêm `@CacheEvict(allEntries=true)` trên mọi write-path role/permission + TTL 60s an toàn cho các đường rò rỉ (migration script).
+> - v0.1.x (bản hiện tại): **bỏ TTL** trên cả hai cache, thay `allEntries=true` bằng `evictByAuthority(authorityName)` — chỉ xoá user / matrix entry liên quan đến role bị sửa. Cache user X **không** bị xoá khi admin sửa role không liên quan tới X. Trade-off: rủi ro xoá thiếu nếu permission write bypass `SecPermissionService` / `SecRoleAdminResource` (vd migration SQL trực tiếp) → consumer phải gọi `UserAuthorityCacheService.evictByAuthority(name)` hoặc `evictAll()` thủ công sau migration.
 
 > ⚠️ Key của `sec-permission-matrix` **shared theo bộ role**, KHÔNG theo user. 100 user cùng role ⇒ 1 entry cache duy nhất.
 

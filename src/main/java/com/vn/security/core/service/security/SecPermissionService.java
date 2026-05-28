@@ -1,32 +1,30 @@
 package com.vn.security.core.service.security;
 
-import com.vn.security.core.security.AuthorityCacheNames;
+import com.vn.security.core.security.UserAuthorityCacheService;
 import com.vn.security.core.security.domain.SecPermission;
-import com.vn.security.core.security.permission.RequestPermissionSnapshot;
 import com.vn.security.core.security.permission.TargetType;
 import com.vn.security.core.security.store.SecPermissionStore;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service layer for {@link SecPermission} write operations.
  *
- * <p>This service owns all cache eviction for the cross-request permission-matrix cache.
- * Per D-02 and D-03, every {@code SecPermission} create, update, or delete must evict the
- * shared Hazelcast cache so the next HTTP request observes the updated permission state.
- * TTL expiry must NOT be relied on for correctness; only write-path eviction provides the
- * required freshness guarantee.
+ * <p>This service owns all cache eviction for the cross-request permission caches. Every
+ * {@code SecPermission} create, update, or delete narrows the eviction blast radius to the
+ * affected authority by calling {@link UserAuthorityCacheService#evictByAuthority(String)};
+ * users and matrix entries unrelated to that authority stay cached.
  *
- * <p>This is the single eviction seam. {@link com.vn.core.web.rest.admin.security.SecPermissionAdminResource}
- * delegates all persistence and eviction work to this service and remains HTTP transport only,
- * consistent with CLAUDE.md layering rules.
+ * <p>This is the single eviction seam. {@code SecPermissionAdminResource} delegates all
+ * persistence and eviction work to this service and remains HTTP transport only, consistent
+ * with CLAUDE.md layering rules.
  */
 @Service
 @Transactional
@@ -35,70 +33,81 @@ public class SecPermissionService {
     private static final Logger LOG = LoggerFactory.getLogger(SecPermissionService.class);
 
     private final SecPermissionStore secPermissionStore;
+    private final UserAuthorityCacheService authorityCacheService;
 
-    public SecPermissionService(SecPermissionStore secPermissionStore) {
+    public SecPermissionService(SecPermissionStore secPermissionStore, UserAuthorityCacheService authorityCacheService) {
         this.secPermissionStore = secPermissionStore;
+        this.authorityCacheService = authorityCacheService;
     }
 
     /**
-     * Saves a new {@link SecPermission} and evicts the shared permission-matrix cache.
+     * Saves a new {@link SecPermission} and evicts the caches scoped to the entity's authority.
      *
      * @param entity the permission to persist (must have no id set)
      * @return the saved entity
      */
-    @Caching(evict = {
-        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
-    })
     public SecPermission save(SecPermission entity) {
-        LOG.debug("Saving SecPermission and evicting permission cache: {}", entity);
-        return secPermissionStore.save(entity);
+        LOG.debug("Saving SecPermission and evicting authority caches: {}", entity);
+        SecPermission saved = secPermissionStore.save(entity);
+        authorityCacheService.evictByAuthority(saved.getAuthorityName());
+        return saved;
     }
 
     /**
-     * Updates an existing {@link SecPermission} and evicts the shared permission-matrix cache.
+     * Updates an existing {@link SecPermission} and evicts the caches scoped to the entity's
+     * authority. If the update changes the authority, both old and new authority entries are
+     * evicted.
      *
      * @param entity the permission to update (must have an id set)
      * @return the saved entity
      */
-    @Caching(evict = {
-        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
-    })
     public SecPermission update(SecPermission entity) {
-        LOG.debug("Updating SecPermission and evicting permission cache: {}", entity);
-        return secPermissionStore.save(entity);
+        LOG.debug("Updating SecPermission and evicting authority caches: {}", entity);
+        Set<String> authoritiesToEvict = new HashSet<>();
+        if (entity.getId() != null) {
+            secPermissionStore.findById(entity.getId()).ifPresent(existing -> authoritiesToEvict.add(existing.getAuthorityName()));
+        }
+        SecPermission saved = secPermissionStore.save(entity);
+        authoritiesToEvict.add(saved.getAuthorityName());
+        for (String authority : authoritiesToEvict) {
+            authorityCacheService.evictByAuthority(authority);
+        }
+        return saved;
     }
 
     /**
-     * Deletes all given {@link SecPermission} instances and evicts the shared permission-matrix cache.
+     * Deletes all given {@link SecPermission} instances and evicts the caches scoped to each
+     * distinct affected authority.
      *
      * @param entities the permissions to delete
      */
-    @Caching(evict = {
-        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
-    })
     public void deleteAll(Collection<SecPermission> entities) {
-        LOG.debug("Deleting {} SecPermission(s) and evicting permission cache", entities.size());
+        LOG.debug("Deleting {} SecPermission(s) and evicting authority caches", entities.size());
+        Set<String> affectedAuthorities = new HashSet<>();
+        for (SecPermission entity : entities) {
+            if (entity.getAuthorityName() != null) {
+                affectedAuthorities.add(entity.getAuthorityName());
+            }
+        }
         secPermissionStore.deleteAll(entities);
+        for (String authority : affectedAuthorities) {
+            authorityCacheService.evictByAuthority(authority);
+        }
     }
 
     /**
      * Deletes a single {@link SecPermission} by id (including all sibling duplicates for the
-     * same authority+targetType+target+action key) and evicts the shared permission-matrix cache.
+     * same authority+targetType+target+action key) and evicts the caches scoped to the affected
+     * authority.
      *
      * @param id the id of the permission to delete
      */
-    @Caching(evict = {
-        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
-    })
     public void deleteById(Long id) {
-        LOG.debug("Deleting SecPermission id={} and evicting permission cache", id);
+        LOG.debug("Deleting SecPermission id={} and evicting authority caches", id);
         secPermissionStore
             .findById(id)
-            .ifPresent(permission ->
+            .ifPresent(permission -> {
+                String authorityName = permission.getAuthorityName();
                 secPermissionStore.deleteAll(
                     secPermissionStore.findAllByAuthorityNameAndTargetTypeAndTargetAndActionOrderByIdAsc(
                         permission.getAuthorityName(),
@@ -106,22 +115,21 @@ public class SecPermissionService {
                         permission.getTarget(),
                         permission.getAction()
                     )
-                )
-            );
+                );
+                authorityCacheService.evictByAuthority(authorityName);
+            });
     }
 
     /**
-     * Deletes all {@link SecPermission} entries for a given authority name and evicts the cache.
+     * Deletes all {@link SecPermission} entries for a given authority name and evicts the
+     * caches scoped to that authority.
      *
      * @param authorityName the authority name whose permissions should be removed
      */
-    @Caching(evict = {
-        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
-    })
     public void deleteAllByAuthorityName(String authorityName) {
-        LOG.debug("Deleting all SecPermissions for authority={} and evicting permission cache", authorityName);
+        LOG.debug("Deleting all SecPermissions for authority={} and evicting authority caches", authorityName);
         secPermissionStore.deleteByAuthorityName(authorityName);
+        authorityCacheService.evictByAuthority(authorityName);
     }
 
     /**
@@ -155,16 +163,15 @@ public class SecPermissionService {
     }
 
     /**
-     * Evicts the full permission-matrix cache without performing any write.
+     * Evicts all entries in both authority caches without performing any write.
      * Should be called when an external operation (e.g. bulk import) modifies permissions
-     * outside the normal service write paths.
+     * outside the normal service write paths and the affected authorities cannot be enumerated.
+     * Prefer {@link UserAuthorityCacheService#evictByAuthority(String)} when the affected
+     * authority is known.
      */
-    @Caching(evict = {
-        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
-    })
     public void evictPermissionCache() {
-        LOG.debug("Explicitly evicting permission-matrix cache");
+        LOG.debug("Explicitly evicting all authority caches");
+        authorityCacheService.evictAll();
     }
 
     @Transactional(readOnly = true)
@@ -177,18 +184,11 @@ public class SecPermissionService {
         return secPermissionStore.findAll();
     }
 
-    @Caching(evict = {
-        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
-    })
     public void deleteSpecificEntityPermissions(String authorityName, String action, String effect) {
         secPermissionStore.deleteSpecificEntityPermissions(authorityName, action, effect);
+        authorityCacheService.evictByAuthority(authorityName);
     }
 
-    @Caching(evict = {
-        @CacheEvict(cacheNames = RequestPermissionSnapshot.PERMISSION_MATRIX_CACHE, allEntries = true),
-        @CacheEvict(cacheNames = AuthorityCacheNames.USER_AUTHORITIES_BY_USERNAME, allEntries = true)
-    })
     public void deleteSpecificAttributePermissions(
         String authorityName,
         String entityPrefix,
@@ -197,5 +197,6 @@ public class SecPermissionService {
         String effect
     ) {
         secPermissionStore.deleteSpecificAttributePermissions(authorityName, entityPrefix, wildcardTarget, action, effect);
+        authorityCacheService.evictByAuthority(authorityName);
     }
 }
