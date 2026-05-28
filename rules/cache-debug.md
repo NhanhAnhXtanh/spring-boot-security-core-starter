@@ -23,13 +23,15 @@ Cache thực tế starter populate vào Hazelcast:
 | Map name | Key | Value | Populate khi | Evict khi |
 |---|---|---|---|---|
 | `userAuthoritiesByUsername` | `String username` (vd `"admin"`) | Authority names resolved for that username | Consumer `CurrentUserAuthorityProvider` hoặc user-role service cache theo convention này | (a) Consumer tự evict khi update user-role; (b) `SecPermissionService.save/update/delete*` evict `allEntries=true` khi sửa permission; (c) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true` khi sửa role; (d) TTL safety net 60s |
-| `sec-permission-matrix` | `String` = `new TreeSet<>(authorities).toString()` (vd `"[ROLE_ADMIN, ROLE_USER]"`) | `PermissionMatrix` (CRUD/row/attribute) | Request RBAC gọi `getMatrix()` → `cache.computeIfAbsent(key, ...)` | (a) `SecPermissionService.save/update/delete*` evict `allEntries=true`; (b) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true`; (c) TTL 3600s |
+| `sec-permission-matrix` | `String` = `String.join("|", new TreeSet<>(authorities))` (vd `"ROLE_ADMIN|ROLE_USER"`) | `PermissionMatrix` (CRUD/row/attribute) | Request RBAC gọi `getMatrix()` → `cache.computeIfAbsent(key, ...)` | (a) `SecPermissionService.save/update/delete*` evict `allEntries=true`; (b) `SecRoleAdminResource` POST/PUT/DELETE evict `allEntries=true`; (c) TTL 3600s |
 | `com.vn.security.core.domain.*` | Entity ID | Entity object | Hibernate L2 cache (load entity qua JPA) | Hibernate tự manage |
 | `default` | — | — | Fallback, hiếm khi dùng | — |
 
 > ⚠️ **Bug-aware design**: trước v0.0.5, login flow đọc `userAuthoritiesByUsername` qua `@Cacheable` → nếu admin sửa role/permission nhưng cache chưa evict ⇒ login mới vẫn lấy User entity cũ ⇒ JWT mới vẫn chứa role cũ. v0.0.5 fix bằng cách: (1) evict cache trong mọi write-path role/permission, (2) TTL 60s làm safety net cho các đường đi không qua write-path (vd migration script update DB trực tiếp).
 
 > ⚠️ Key của `sec-permission-matrix` **shared theo bộ role**, KHÔNG theo user. 100 user cùng role ⇒ 1 entry cache duy nhất.
+
+> ⚠️ Key dùng pipe-join chứ KHÔNG dùng `TreeSet.toString()`. Lý do: `AbstractCollection.toString()` không phải contract của JDK nên không reliable. Khi script JS build cacheKey để lookup, phải dùng `roleNames.join("|")` — KHÔNG dùng `"[" + roleNames.join(", ") + "]"`. Xem `RequestPermissionSnapshot.toCacheKey()`.
 
 ---
 
@@ -203,8 +205,8 @@ for (var i = 0; i < userKeys.length; i++) {
   out += "USER: " + login + "\n";
   out += "  roles: [" + roleNames.join(", ") + "]\n";
 
-  // Key matrix = new TreeSet<>(authorities).toString() — bộ role đã sort
-  var cacheKey = "[" + roleNames.join(", ") + "]";
+  // Key matrix = String.join("|", new TreeSet<>(authorities)) — bộ role pipe-join, đã sort
+  var cacheKey = roleNames.join("|");
   var pm = matrix.get(cacheKey);
 
   if (pm === null) {
