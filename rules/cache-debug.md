@@ -177,6 +177,8 @@ Bước 5. Verify VALUE entry mới chứa permission đúng.
 
 Trả lời: ai đang trong cache, role gì, được làm gì.
 
+> ⚠️ Value của `userAuthoritiesByUsername` là `Collection<String>` (authority names đã validate), KHÔNG phải `User` entity. Xem `DefaultCurrentUserAuthorityResolver.java:78` (`IMap<String, Collection<String>>`). KHÔNG gọi `user.getAuthorities()/getFirstName()/...` lên value này — sẽ throw `TypeError: ... is not a function`.
+
 ```javascript
 var users = hazelcast.getMap("userAuthoritiesByUsername");
 var matrix = hazelcast.getMap("sec-permission-matrix");
@@ -187,23 +189,21 @@ out += "=== USERS IN CACHE (" + userKeys.length + ") ===\n\n";
 
 for (var i = 0; i < userKeys.length; i++) {
   var login = userKeys[i];
-  var user = users.get(login);
+  var authorities = users.get(login); // Collection<String>
 
   // Lấy roles
-  var auths = user.getAuthorities();
   var roleNames = [];
-  var it = auths.iterator();
+  var it = authorities.iterator();
   while (it.hasNext()) {
-    roleNames.push(it.next().getName());
+    roleNames.push(String(it.next()));
   }
   roleNames.sort();
 
   out += "------------------------------------------\n";
   out += "USER: " + login + "\n";
-  out += "  fullName: " + user.getFirstName() + " " + user.getLastName() + "\n";
-  out += "  activated: " + user.isActivated() + "\n";
-  out += "  roles: " + roleNames + "\n";
+  out += "  roles: [" + roleNames.join(", ") + "]\n";
 
+  // Key matrix = new TreeSet<>(authorities).toString() — bộ role đã sort
   var cacheKey = "[" + roleNames.join(", ") + "]";
   var pm = matrix.get(cacheKey);
 
