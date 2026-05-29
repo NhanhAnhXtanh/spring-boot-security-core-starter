@@ -376,6 +376,8 @@ Quan trọng: chọn claim làm `Authentication.getName()` (`preferred_username`
 - [ ] Logout flow gọi `authorityCache.evict(username)`.
 - [ ] Register flow assign default role và gọi `authorityCache.evict(username)`.
 - [ ] Disable user / unassign role gọi `authorityCache.evict(username)`.
+- [ ] Custom role admin endpoint của consumer (nếu có) gọi `authorityCache.evictByAuthority(roleName)` sau khi sửa/xoá role — chỉ evict user có role đó, không churn cache toàn cluster. Starter `SecPermissionService` / `SecRoleAdminResource` đã tự gọi, consumer chỉ cần làm khi tự viết admin endpoint song song.
+- [ ] Migration script / raw SQL update lên `sec_permission` hoặc consumer user-role table phải gọi `authorityCache.evictAll()` (hoặc loạt `evictByAuthority(name)` nếu enumerable) **sau khi chạy** — từ v0.1.1 cache **không có TTL safety net** (trước v0.1.0 có TTL 60s/3600s tự cứu).
 - [ ] Bulk role remap gọi `authorityCache.evictAll()`.
 - [ ] `CurrentUserAuthorityProvider` implement trả về `sec_authority.name` đã seed.
 - [ ] Default role `ROLE_USER` (và mọi role consumer dùng) đã seed trong `sec_authority`.

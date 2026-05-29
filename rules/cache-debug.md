@@ -4,6 +4,11 @@
 >
 > Hazelcast là **cache RAM**, KHÔNG phải database. MC chỉ cho thấy những gì đã được code load — không phải toàn bộ data nghiệp vụ. Muốn xem full role/permission/menu → query PostgreSQL hoặc Swagger.
 
+> 📝 **Changelog rule này** (bám theo behavior thực tế của starter):
+> - **2026-05-28** — Sửa SCRIPT 1 cho đúng type `Collection<String>` của `userAuthoritiesByUsername` (trước đó script gọi `user.getAuthorities()` sai type, throw `TypeError`). Bug starter [#S009](../../../../../../../Bug/BUGS-starter.md).
+> - **2026-05-28** — Sửa format key cache `sec-permission-matrix` từ `[ROLE_A, ROLE_B]` (TreeSet.toString) sang `ROLE_A|ROLE_B` (pipe-join) cho khớp `RequestPermissionSnapshot.toCacheKey`. Bug starter [#S010](../../../../../../../Bug/BUGS-starter.md).
+> - **2026-05-29** — Bỏ TTL khỏi `userAuthoritiesByUsername` (60s → ∞) và `sec-permission-matrix` (3600s → ∞). Thay `@CacheEvict(allEntries=true)` bằng `UserAuthorityCacheService.evictByAuthority(name)` để chỉ evict user / matrix entry liên quan đến role bị sửa. Consumer cần gọi `evictAll()` thủ công sau migration SQL trực tiếp vì TTL safety net không còn. Áp dụng từ starter v0.1.1.
+
 ---
 
 ## TL;DR
